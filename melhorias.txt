@@ -1,0 +1,5 @@
+1. data de inicio atualizações (escrita)
+2. data criar tabela
+3. coluna dat_ref_carga
+4. limitar caracteres especiais no nome da tabela e colunas
+5. Coluna de partição

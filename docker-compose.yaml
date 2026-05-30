@@ -1,0 +1,82 @@
+services:
+  postgres_db:
+    image: postgres:13
+    container_name: postgres_db
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: data_catalog
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+  ldap:
+    build: ./ldap
+    container_name: ldap
+    hostname: ldap
+    environment:
+      LDAP_ORGANISATION: "empresa"
+      LDAP_DOMAIN: "empresa.com"
+      LDAP_ADMIN_PASSWORD: "admin"
+      LDAP_REMOVE_CONFIG_AFTER_SETUP: "false"
+    ports:
+      - "389:389"
+      - "636:636"
+    privileged: true
+    networks:
+      - app-network
+
+  auth_service:
+    build: ./auth_service
+    container_name: auth_service
+    ports:
+      - "8000:8000"
+    depends_on:
+      - ldap
+    networks:
+      - app-network
+
+  ingestion_service:
+    build: ./ingestion_service
+    container_name: ingestion_service
+    ports:
+      - "8001:8001"
+    depends_on:
+      - auth_service
+      - postgres_db
+    environment:
+      - DATABASE_URL=postgresql://user:password@postgres_db:5432/data_catalog
+    networks:
+      - app-network
+    #metadata_service:
+    #build: ./metadata_service
+    #container_name: metadata_service
+    #ports:
+    #  - "8002:8002"
+    #depends_on:
+    #  - postgres_db
+    #environment:
+    #  - DATABASE_URL=postgresql://user:password@postgres_db:5432/data_catalog
+    #networks:
+    #  - app-network
+
+  frontend:
+    build: ./frontend
+    container_name: frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - auth_service
+      - ingestion_service
+    networks:
+      - app-network
+
+volumes:
+  postgres_data:
+
+networks:
+  app-network:
+    driver: bridge
