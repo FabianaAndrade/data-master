@@ -218,12 +218,15 @@ def get_ingestions_list():
                     itm.table_name as tabela,
                     i.status,
                     i.last_operation as detalhe,
-                    u.full_name as responsavel
+                    u.full_name as responsavel,
+                    s.name as sigla
                 FROM "ingestions" i
                 LEFT JOIN "ingestions_table_metadata" itm 
                     ON i.ingestion_id = itm.ingestion_id AND i.active_version = itm.version
                 LEFT JOIN "users" u 
-                    ON i.created_by = u.user_id;
+                    ON i.created_by = u.user_id
+                LEFT JOIN "siglas" s
+                    ON i.sigla_id = s.sigla_id;
             """)
             return cur.fetchall()
     finally:
@@ -245,7 +248,8 @@ def get_ingestions_list_for_user(username: str):
                     itm.table_name as tabela,
                     i.status,
                     i.last_operation as detalhe,
-                    cb.full_name as responsavel
+                    cb.full_name as responsavel,
+                    s.name as sigla
                 FROM "ingestions" i
                 LEFT JOIN "ingestions_table_metadata" itm 
                     ON i.ingestion_id = itm.ingestion_id AND i.active_version = itm.version

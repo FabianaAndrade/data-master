@@ -99,6 +99,35 @@ async def list_ingestions(username: str = Depends(get_current_user)):
         except httpx.RequestError as e:
             raise HTTPException(status_code=503, detail=f"Metadata service indisponível: {e}")
 
+@app.get("/ingestion/account-stats")
+async def get_account_stats(username: str = Depends(get_current_user)):
+    async with httpx.AsyncClient() as client:
+        try:
+            # 1. Obter siglas do usuário
+            siglas_res = await client.get(f"{AUTH_SERVICE_URL}/auth/siglas/{username}", timeout=10.0)
+            siglas_res.raise_for_status()
+            user_siglas = siglas_res.json()
+            sigla_names = [s["id"] for s in user_siglas] if isinstance(user_siglas, list) else []
+
+            # 2. Obter TODAS as ingestões
+            ing_res = await client.get(f"{METADATA_SERVICE_URL}/ingestions/list", timeout=10.0)
+            ing_res.raise_for_status()
+            all_ingestions = ing_res.json().get("ingestions", [])
+
+            # 3. Calcular estatísticas
+            cadastradas_por_mim = sum(1 for i in all_ingestions if i.get("responsavel") == username)
+            total_das_minhas_siglas = sum(1 for i in all_ingestions if i.get("sigla") in sigla_names)
+
+
+            return {
+                "username": username,
+                "siglas": user_siglas,
+                "ingestoes_cadastradas": cadastradas_por_mim,
+                "ingestoes_total_siglas": total_das_minhas_siglas
+            }
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/ingestion/detail/{ingestion_id}")
 async def get_ingestion_detail(ingestion_id: int, username: str = Depends(get_current_user)):
     async with httpx.AsyncClient() as client:
