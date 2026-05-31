@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "../hooks/use-auth";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, XOctagon } from "lucide-react";
 
 interface ColumnDetail {
   nome: string;
@@ -43,6 +43,33 @@ const IngestionDetail = () => {
   
   const [detail, setDetail] = useState<IngestionDetailData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isCancelling, setIsCancelling] = useState(false);
+
+  const handleCancel = async () => {
+    if (!user?.token || !id) return;
+    if (!confirm("Tem certeza que deseja cancelar esta ingestão?")) return;
+    setIsCancelling(true);
+    try {
+      const res = await fetch(`${INGESTION_SERVICE_URL}/ingestion/cancel/${id}`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${user.token}`,
+          "Content-Type": "application/json",
+        },
+      });
+      if (res.ok) {
+        toast.success("Ingestão cancelada com sucesso.");
+        navigate("/");
+      } else {
+        const err = await res.json().catch(() => ({}));
+        toast.error(err.detail ?? "Erro ao cancelar ingestão.");
+      }
+    } catch {
+      toast.error("Erro ao tentar cancelar ingestão.");
+    } finally {
+      setIsCancelling(false);
+    }
+  };
 
   useEffect(() => {
     async function fetchDetail() {
@@ -205,8 +232,24 @@ const IngestionDetail = () => {
             </div>
           </div>
 
-          <div className="flex justify-end pt-4">
-            <Button variant="outline" className="w-1/3 border-primary/50 hover:bg-primary/10" onClick={() => navigate("/")}>
+          <div className="flex gap-4 justify-end pt-4">
+            {/* Cancelar: apenas se não for APPROVED nem CANCELLED */}
+            {detail.status !== "APPROVED" && detail.status !== "CANCELLED" && (
+              <Button
+                variant="destructive"
+                className="gap-2"
+                disabled={isCancelling}
+                onClick={handleCancel}
+              >
+                {isCancelling ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <XOctagon className="w-4 h-4" />
+                )}
+                Cancelar ingestão
+              </Button>
+            )}
+            <Button variant="outline" className="border-primary/50 hover:bg-primary/10" onClick={() => navigate("/")}>
               Voltar ao Início
             </Button>
           </div>

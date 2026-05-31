@@ -24,14 +24,14 @@ const IngestionHistory = () => {
     async function fetchIngestions() {
       if (!user?.token) return;
       try {
-        const response = await fetch(`${INGESTION_SERVICE_URL}/ingestion/list`, {
+        const response = await fetch(`${INGESTION_SERVICE_URL}/ingestion/list?username=${encodeURIComponent(user.username)}`, {
           headers: {
             "Authorization": `Bearer ${user.token}`,
           },
         });
         if (response.ok) {
           const data = await response.json();
-          setIngestions(data);
+          setIngestions(data.ingestions || []);
         }
       } catch (error) {
         console.error("Erro ao carregar histórico:", error);
@@ -75,7 +75,7 @@ const IngestionHistory = () => {
               <ArrowLeft className="h-4 w-4" />
             </Button>
           </Link>
-          <h1 className="text-2xl font-bold text-foreground">Histórico de ingestões</h1>
+          <h1 className="text-2xl font-bold text-foreground">Minhas ingestões</h1>
         </div>
 
         {isLoading ? (

@@ -70,7 +70,7 @@ def start_ingestion_db(username: str, body: IngestionRequest) -> int:
                         "sigla_id", "created_at", "status", "should_be_approved_until", 
                         "created_by", "last_updated_by", "active_version", "last_operation"
                     )
-                    VALUES (%s, CURRENT_DATE, 'PENDING_APPROVAL', CURRENT_DATE + INTERVAL '7 days', %s, %s, NULL, 'CREATE')
+                    VALUES (%s, CURRENT_DATE, 'PENDING_APPROVAL', CURRENT_DATE + INTERVAL '10 days', %s, %s, NULL, 'CREATE')
                     RETURNING "ingestion_id";
                     """,
                     (sigla_id, creator_id, creator_id)
@@ -124,7 +124,7 @@ def submit_ingestion_db(username: str, body: FullIngestionRequest) -> int:
                         "sigla_id", "created_at", "status", "should_be_approved_until", 
                         "created_by", "last_updated_by", "active_version", "last_operation"
                     )
-                    VALUES (%s, CURRENT_DATE, 'PENDING_APPROVAL', CURRENT_DATE + INTERVAL '7 days', %s, %s, NULL, 'CREATE')
+                    VALUES (%s, CURRENT_DATE, 'PENDING_APPROVAL', CURRENT_DATE + INTERVAL '10 days', %s, %s, NULL, 'CREATE')
                     RETURNING "ingestion_id";
                     """,
                     (sigla_id, creator_id, creator_id)
@@ -226,6 +226,83 @@ def get_ingestions_list():
                     ON i.created_by = u.user_id;
             """)
             return cur.fetchall()
+    finally:
+        if conn:
+            conn.close()
+
+def get_ingestions_list_for_user(username: str):
+    """
+    Retorna ingestões visíveis ao usuário:
+    - ingestões criadas por ele (created_by)
+    - ingestões de siglas das quais ele é owner
+    """
+    conn = get_db_connection()
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                SELECT 
+                    i.ingestion_id as id,
+                    itm.table_name as tabela,
+                    i.status,
+                    i.last_operation as detalhe,
+                    cb.full_name as responsavel
+                FROM "ingestions" i
+                LEFT JOIN "ingestions_table_metadata" itm 
+                    ON i.ingestion_id = itm.ingestion_id AND i.active_version = itm.version
+                LEFT JOIN "users" cb ON i.created_by = cb.user_id
+                LEFT JOIN "siglas" s ON i.sigla_id = s.sigla_id
+                LEFT JOIN "users" ow ON s.owner_id = ow.user_id
+                WHERE 
+                    cb.full_name = %s OR cb.email = %s
+                    OR ow.full_name = %s OR ow.email = %s
+                ORDER BY i.ingestion_id DESC;
+            """, (username, username, username, username))
+            return cur.fetchall()
+    finally:
+        if conn:
+            conn.close()
+
+def cancel_ingestion_by_user(ingestion_id: int, username: str):
+    """
+    Cancela uma ingestão desde que o solicitante seja o criador
+    e o status NÃO seja APPROVED.
+    Retorna dict com status e mensagem.
+    """
+    conn = get_db_connection()
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            # Busca a ingestão com dados do criador
+            cur.execute("""
+                SELECT i.ingestion_id, i.status, cb.full_name as creator_name, cb.email as creator_email
+                FROM "ingestions" i
+                LEFT JOIN "users" cb ON i.created_by = cb.user_id
+                WHERE i.ingestion_id = %s;
+            """, (ingestion_id,))
+            row = cur.fetchone()
+            if not row:
+                return {"error": "not_found", "message": "Ingestão não encontrada."}
+
+            if row["status"] == "APPROVED":
+                return {"error": "already_approved", "message": "Não é possível cancelar uma ingestão já aprovada."}
+
+            # Verifica se é o criador
+            is_creator = username in (row["creator_name"] or "", row["creator_email"] or "")
+            if not is_creator:
+                return {"error": "forbidden", "message": "Apenas o solicitante pode cancelar esta ingestão."}
+
+        with conn:
+            with conn.cursor() as cur:
+                user_id_row = None
+                cur.execute('SELECT user_id FROM "users" WHERE full_name = %s OR email = %s;', (username, username))
+                user_id_row = cur.fetchone()
+                user_id = user_id_row[0] if user_id_row else None
+
+                cur.execute("""
+                    UPDATE "ingestions"
+                    SET status = 'CANCELLED', last_operation = 'CANCEL', last_updated_by = %s
+                    WHERE ingestion_id = %s;
+                """, (user_id, ingestion_id))
+        return {"ok": True, "message": "Ingestão cancelada com sucesso."}
     finally:
         if conn:
             conn.close()
@@ -366,35 +443,35 @@ def get_quality_rules_list():
         if conn:
             conn.close()
 
-def approve_ingestion_db(ingestion_id: int):
+def approve_ingestion_db(ingestion_id: int, approved_by: int):
     conn = get_db_connection()
     try:
         with conn:
             with conn.cursor() as cur:
                 cur.execute(
                     """
-                    UPDATE "ingestions" 
-                    SET "status" = 'APPROVED', "last_operation" = 'APPROVE'
+                    UPDATE "ingestions"
+                    SET "status" = 'APPROVED', "last_operation" = 'APPROVE', "last_updated_by" = %s
                     WHERE "ingestion_id" = %s;
                     """,
-                    (ingestion_id,)
+                    (approved_by, ingestion_id)
                 )
     finally:
         if conn:
             conn.close()
 
-def reject_ingestion_db(ingestion_id: int):
+def reject_ingestion_db(ingestion_id: int, rejected_by: int):
     conn = get_db_connection()
     try:
         with conn:
             with conn.cursor() as cur:
                 cur.execute(
                     """
-                    UPDATE "ingestions" 
-                    SET "status" = 'REJECTED', "last_operation" = 'REJECT'
+                    UPDATE "ingestions"
+                    SET "status" = 'REJECTED', "last_operation" = 'REJECT', "last_updated_by" = %s
                     WHERE "ingestion_id" = %s;
                     """,
-                    (ingestion_id,)
+                    (rejected_by, ingestion_id)
                 )
     finally:
         if conn:
@@ -411,6 +488,152 @@ def delete_ingestion_db(ingestion_id: int):
                     """,
                     (ingestion_id,)
                 )
+    finally:
+        if conn:
+            conn.close()
+
+# ---------------------------------------------------------------------------
+# Approval workflow helpers
+# ---------------------------------------------------------------------------
+
+def get_ingestion_for_approval(ingestion_id: int):
+    """
+    Retorna dados completos de uma ingestão para o fluxo de aprovação:
+    status, prazo, quem criou, owner da sigla.
+    """
+    conn = get_db_connection()
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT
+                    i.ingestion_id,
+                    i.status,
+                    i.created_at,
+                    i.should_be_approved_until,
+                    i.created_by,
+                    cb.full_name  AS created_by_name,
+                    cb.email      AS created_by_email,
+                    s.sigla_id,
+                    s.name        AS sigla_name,
+                    s.owner_id,
+                    ow.full_name  AS owner_name,
+                    ow.email      AS owner_email,
+                    itm.table_name
+                FROM "ingestions" i
+                LEFT JOIN "siglas"                    s   ON i.sigla_id    = s.sigla_id
+                LEFT JOIN "users"                     ow  ON s.owner_id    = ow.user_id
+                LEFT JOIN "users"                     cb  ON i.created_by  = cb.user_id
+                LEFT JOIN "ingestions_table_metadata" itm
+                       ON i.ingestion_id = itm.ingestion_id
+                      AND i.active_version = itm.version
+                WHERE i.ingestion_id = %s;
+                """,
+                (ingestion_id,),
+            )
+            row = cur.fetchone()
+            return dict(row) if row else None
+    finally:
+        if conn:
+            conn.close()
+
+def get_pending_ingestions_for_owner(owner_username: str):
+    """
+    Lista ingestões PENDING_APPROVAL cujo owner da sigla é o usuário informado
+    e o prazo ainda não expirou.
+    """
+    conn = get_db_connection()
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT
+                    i.ingestion_id,
+                    i.status,
+                    i.created_at,
+                    i.should_be_approved_until,
+                    s.name        AS sigla_name,
+                    cb.full_name  AS solicitante,
+                    itm.table_name
+                FROM "ingestions" i
+                LEFT JOIN "siglas"                    s   ON i.sigla_id   = s.sigla_id
+                LEFT JOIN "users"                     ow  ON s.owner_id   = ow.user_id
+                LEFT JOIN "users"                     cb  ON i.created_by = cb.user_id
+                LEFT JOIN "ingestions_table_metadata" itm
+                       ON i.ingestion_id = itm.ingestion_id
+                      AND i.active_version = itm.version
+                WHERE i.status = 'PENDING_APPROVAL'
+                  AND (ow.full_name = %s OR ow.email = %s)
+                ORDER BY i.should_be_approved_until ASC;
+                """,
+                (owner_username, owner_username),
+            )
+            return [dict(r) for r in cur.fetchall()]
+    finally:
+        if conn:
+            conn.close()
+
+def cancel_expired_ingestions():
+    """
+    Cancela ingestões PENDING_APPROVAL cujo prazo de 10 dias expirou.
+    Retorna lista de IDs cancelados.
+    """
+    conn = get_db_connection()
+    try:
+        with conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    UPDATE "ingestions"
+                    SET status         = 'CANCELLED',
+                        last_operation = 'CANCEL'
+                    WHERE status = 'PENDING_APPROVAL'
+                      AND should_be_approved_until < CURRENT_DATE
+                    RETURNING ingestion_id;
+                    """
+                )
+                rows = cur.fetchall()
+                return [r[0] for r in rows]
+    finally:
+        if conn:
+            conn.close()
+
+def cancel_ingestion_db(ingestion_id: int, cancelled_by: int):
+    """Cancela uma ingestão específica por prazo expirado."""
+    conn = get_db_connection()
+    try:
+        with conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    UPDATE "ingestions"
+                    SET status          = 'CANCELLED',
+                        last_operation  = 'CANCEL',
+                        last_updated_by = %s
+                    WHERE ingestion_id = %s;
+                    """,
+                    (cancelled_by, ingestion_id)
+                )
+    finally:
+        if conn:
+            conn.close()
+
+def get_user_by_username(username: str):
+    """Busca um usuário por full_name ou email."""
+    conn = get_db_connection()
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(
+                """
+                SELECT user_id, full_name, email
+                FROM "users"
+                WHERE full_name = %s OR email = %s
+                LIMIT 1;
+                """,
+                (username, username),
+            )
+            row = cur.fetchone()
+            return dict(row) if row else None
     finally:
         if conn:
             conn.close()

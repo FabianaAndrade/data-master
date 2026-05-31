@@ -59,7 +59,8 @@ async def submit_ingestion(
         try:
             response = await client.post(
                 f"{METADATA_SERVICE_URL}/ingestions",
-                json=body.dict(),
+                json=body,
+                params={"username": username},   # ← repassa o usuário autenticado
                 timeout=10.0,
             )
             response.raise_for_status()
@@ -81,11 +82,16 @@ async def submit_ingestion(
         "message": "Ingestão salva com sucesso no banco de dados."
     }
 
+
 @app.get("/ingestion/list")
 async def list_ingestions(username: str = Depends(get_current_user)):
     async with httpx.AsyncClient() as client:
         try:
-            response = await client.get(f"{METADATA_SERVICE_URL}/ingestions/list", timeout=10.0)
+            response = await client.get(
+                f"{METADATA_SERVICE_URL}/ingestions/list",
+                params={"username": username},
+                timeout=10.0,
+            )
             response.raise_for_status()
             return response.json()
         except httpx.HTTPStatusError as e:
@@ -104,7 +110,22 @@ async def get_ingestion_detail(ingestion_id: int, username: str = Depends(get_cu
             raise HTTPException(status_code=e.response.status_code, detail=f"Erro do metadata_service: {e.response.text}")
         except httpx.RequestError as e:
             raise HTTPException(status_code=503, detail=f"Metadata service indisponível: {e}")
-        
+
+@app.post("/ingestion/cancel/{ingestion_id}")
+async def cancel_ingestion(ingestion_id: int, username: str = Depends(get_current_user)):
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.post(
+                f"{METADATA_SERVICE_URL}/ingestions/{ingestion_id}/cancel-by-user",
+                json={"username": username},
+                timeout=10.0,
+            )
+            response.raise_for_status()
+            return response.json()
+        except httpx.HTTPStatusError as e:
+            raise HTTPException(status_code=e.response.status_code, detail=e.response.json().get("detail", e.response.text))
+        except httpx.RequestError as e:
+            raise HTTPException(status_code=503, detail=f"Metadata service indisponível: {e}")
 
 @app.get("/ingestion/fontes")
 async def get_ingestion_fontes(username: str = Depends(get_current_user)):

@@ -149,39 +149,54 @@ const StepColunas = ({ data, tabelaOrigem, incluirDataRef, onChange, onNext, onB
             <span>PII</span>
             <span>Tipo PII</span>
           </div>
-          {data.colunas.slice(0, numCols).map((col, i) => (
-            <div key={i} className="grid grid-cols-5 gap-2">
-              <Input placeholder="Nome da coluna" value={col.nome} onChange={(e) => updateCol(i, "nome", e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))} disabled={isLoading} />
+          {data.colunas.slice(0, numCols).map((col, i) => {
+            // Índice da coluna que já tem chave primária (se houver)
+            const pkOwnerIndex = data.colunas.findIndex((c) => c.chavePrimaria === "Sim");
+            // "Sim" fica desabilitado se OUTRA coluna já é a PK
+            const simDisabled = pkOwnerIndex !== -1 && pkOwnerIndex !== i;
 
-              <Select value={col.dataType} onValueChange={(v) => updateCol(i, "dataType", v)}>
-                <SelectTrigger disabled={isLoading}><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {opcoes.dataTypes.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
-                </SelectContent>
-              </Select>
+            return (
+              <div key={i} className="grid grid-cols-5 gap-2">
+                <Input placeholder="Nome da coluna" value={col.nome} onChange={(e) => updateCol(i, "nome", e.target.value.replace(/[^a-zA-Z0-9_]/g, ''))} disabled={isLoading} />
 
-              <Select value={col.chavePrimaria} onValueChange={(v) => updateCol(i, "chavePrimaria", v)}>
-                <SelectTrigger disabled={isLoading}><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {opcoes.chavePrimaria.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
-                </SelectContent>
-              </Select>
+                <Select value={col.dataType} onValueChange={(v) => updateCol(i, "dataType", v)}>
+                  <SelectTrigger disabled={isLoading}><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {opcoes.dataTypes.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                  </SelectContent>
+                </Select>
 
-              <Select value={col.pii} onValueChange={(v) => updateCol(i, "pii", v)}>
-                <SelectTrigger disabled={isLoading}><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {opcoes.pii.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
-                </SelectContent>
-              </Select>
+                <Select value={col.chavePrimaria} onValueChange={(v) => updateCol(i, "chavePrimaria", v)}>
+                  <SelectTrigger disabled={isLoading}><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {opcoes.chavePrimaria.map(opt => (
+                      <SelectItem
+                        key={opt}
+                        value={opt}
+                        disabled={opt === "Sim" && simDisabled}
+                      >
+                        {opt}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
 
-              <Select value={col.piiType} onValueChange={(v) => updateCol(i, "piiType", v)} disabled={col.pii === "Não" || isLoading}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {opcoes.piiTypes.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-          ))}
+                <Select value={col.pii} onValueChange={(v) => updateCol(i, "pii", v)}>
+                  <SelectTrigger disabled={isLoading}><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {opcoes.pii.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+
+                <Select value={col.piiType} onValueChange={(v) => updateCol(i, "piiType", v)} disabled={col.pii === "Não" || isLoading}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {opcoes.piiTypes.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            );
+          })}
           
           {incluirDataRef && (
             <div className="grid grid-cols-5 gap-2 opacity-70">

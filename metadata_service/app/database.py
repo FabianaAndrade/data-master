@@ -100,8 +100,12 @@ def seed_database_if_empty():
                             (sid, name, owner_id)
                         )
 
-                # 6. Default ingestions are not seeded to allow database to start with 0 records
-                pass
+                # 6. Reset sequences to avoid duplicate key errors after explicit ID inserts
+                cur.execute("SELECT setval('users_user_id_seq', (SELECT COALESCE(MAX(user_id), 1) FROM users));")
+                cur.execute("SELECT setval('siglas_sigla_id_seq', (SELECT COALESCE(MAX(sigla_id), 1) FROM siglas));")
+                cur.execute("SELECT setval('origins_sys_id_seq', (SELECT COALESCE(MAX(sys_id), 1) FROM origins));")
+                cur.execute("SELECT setval('quality_rules_rule_id_seq', (SELECT COALESCE(MAX(rule_id), 1) FROM quality_rules));")
+                cur.execute("SELECT setval('pii_types_pii_id_seq', (SELECT COALESCE(MAX(pii_id), 1) FROM pii_types));")
         print("Database seeded successfully.")
     except Exception as e:
         print(f"Error seeding database: {e}")

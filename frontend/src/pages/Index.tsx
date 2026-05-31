@@ -30,7 +30,7 @@ const Index = () => {
     async function fetchIngestions() {
       if (!user?.token) return;
       try {
-        const response = await fetch(`${INGESTION_SERVICE_URL}/ingestion/list`, {
+        const response = await fetch(`${INGESTION_SERVICE_URL}/ingestion/list?username=${encodeURIComponent(user.username)}`, {
           headers: {
             "Authorization": `Bearer ${user.token}`,
           },
@@ -42,7 +42,7 @@ const Index = () => {
         }
         if (response.ok) {
           const data = await response.json();
-          setIngestions(data);
+          setIngestions(data.ingestions || []);
         }
       } catch (error) {
         console.error("Erro ao carregar ingestões:", error);
@@ -114,7 +114,7 @@ const Index = () => {
             <div className="md:col-span-2 space-y-4">
               <div className="flex items-center justify-between mb-2">
                 <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                  Ingestões recentes
+                  Minhas ingestões
                 </h2>
                 <Link to="/ingestions" className="text-xs text-primary hover:underline flex items-center gap-1">
                   Ver histórico <ArrowRight className="w-3 h-3" />

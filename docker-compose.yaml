@@ -73,9 +73,9 @@ services:
       - "8003:8003"
     depends_on:
       - auth_service
-      - ingestion_service
+      - metadata_service
     environment:
-      - DATABASE_URL=postgresql://user:password@postgres_db:5432/data_catalog
+      - METADATA_SERVICE_URL=http://metadata_service:8002
     networks:
       - app-network
 

@@ -23,6 +23,9 @@ interface StepMetadadosProps {
 
 const INGESTION_SERVICE_URL = (import.meta as any).env.VITE_INGESTION_SERVICE_URL ?? "http://localhost:8001";
 
+/** Retorna a data de hoje no formato YYYY-MM-DD (compatível com input[type=date]) */
+const todayISO = () => new Date().toISOString().split("T")[0];
+
 const StepMetadados = ({ data, tabelaOrigem, onChange, onNext, onBack }: StepMetadadosProps) => {
   const { user } = useAuth();
   const [opcoes, setOpcoes] = useState({
@@ -32,6 +35,18 @@ const StepMetadados = ({ data, tabelaOrigem, onChange, onNext, onBack }: StepMet
     incluirColunaDataRef: [] as string[],
   });
   const [isLoading, setIsLoading] = useState(false);
+
+  // ── Validação de datas ────────────────────────────────────────────────────
+  const today = todayISO();
+  const errCriacao =
+    data.dataCriacao && data.dataCriacao < today
+      ? "A data de criação deve ser maior ou igual à data atual."
+      : "";
+  const errAtualizacao =
+    data.dataAtualizacao && data.dataCriacao && data.dataAtualizacao <= data.dataCriacao
+      ? "A data de início de atualizações deve ser maior que a data de criação."
+      : "";
+  const datesValid = !errCriacao && !errAtualizacao;
 
   useEffect(() => {
     async function fetchMetadados() {
@@ -105,12 +120,28 @@ const StepMetadados = ({ data, tabelaOrigem, onChange, onNext, onBack }: StepMet
 
         <div className="space-y-2">
           <label className="text-sm font-medium text-foreground">Data para criação da tabela</label>
-          <Input type="date" placeholder="29/04/2026" value={data.dataCriacao} onChange={(e) => onChange({ ...data, dataCriacao: e.target.value })} />
+          <Input
+            type="date"
+            min={today}
+            value={data.dataCriacao}
+            onChange={(e) => onChange({ ...data, dataCriacao: e.target.value })}
+            className={errCriacao ? "border-destructive focus-visible:ring-destructive" : ""}
+          />
+          {errCriacao && <p className="text-xs text-destructive">{errCriacao}</p>}
         </div>
 
         <div className="space-y-2">
           <label className="text-sm font-medium text-foreground">Data inicio de atualizações</label>
-          <Input type="date" placeholder="29/04/2026" value={data.dataAtualizacao} onChange={(e) => onChange({ ...data, dataAtualizacao: e.target.value })} />
+          <Input
+            type="date"
+            min={data.dataCriacao ? (() => { const d = new Date(data.dataCriacao); d.setDate(d.getDate() + 1); return d.toISOString().split("T")[0]; })() : today}
+            value={data.dataAtualizacao}
+            onChange={(e) => onChange({ ...data, dataAtualizacao: e.target.value })}
+            className={errAtualizacao ? "border-destructive focus-visible:ring-destructive" : ""}
+            disabled={!data.dataCriacao}
+          />
+          {!data.dataCriacao && <p className="text-xs text-muted-foreground">Preencha a data de criação primeiro.</p>}
+          {errAtualizacao && <p className="text-xs text-destructive">{errAtualizacao}</p>}
         </div>
 
         <div className="space-y-2">
@@ -136,7 +167,7 @@ const StepMetadados = ({ data, tabelaOrigem, onChange, onNext, onBack }: StepMet
 
       <div className="flex gap-4 pt-4">
         {onBack && <Button variant="outline" className="w-1/3 border-primary/50 hover:bg-primary/10" onClick={onBack}>Voltar</Button>}
-        <Button className="flex-1" size="lg" onClick={onNext} disabled={!data.nomeTabela}>Continue</Button>
+        <Button className="flex-1" size="lg" onClick={onNext} disabled={!data.nomeTabela || !datesValid}>Continue</Button>
       </div>
     </div>
   );
