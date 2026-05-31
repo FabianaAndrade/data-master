@@ -1,10 +1,6 @@
 from pydantic import BaseModel
 
-class IngestionRequest(BaseModel):
-    sigla: str
-    fonte: str
-    tabela: str
-    descricao: str = ""
+
 
 class ColumnInfo(BaseModel):
     nome: str
@@ -60,3 +56,4 @@ class FullIngestionRequest(BaseModel):
     colunas: ColunasData
     dicionarizacao: DicionarizacaoData
     qualidade: QualidadeData
+

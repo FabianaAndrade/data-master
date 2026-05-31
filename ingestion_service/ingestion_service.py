@@ -1,11 +1,8 @@
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 import httpx
-from config import AUTH_SERVICE_URL
-from database import startup_db_seed, get_db_connection
+from config import AUTH_SERVICE_URL, METADATA_SERVICE_URL
 from auth import get_current_user
-from schemas import IngestionRequest, FullIngestionRequest
-import crud
 
 app = FastAPI(title="Ingestion Service", version="1.0.0")
 
@@ -17,9 +14,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.on_event("startup")
-def on_startup():
-    startup_db_seed()
+
 
 @app.get("/health")
 def health():
@@ -51,58 +46,34 @@ async def get_siglas(username: str = Depends(get_current_user)):
 
     siglas_data = response.json()
     
-    # Sync in Postgres
-    try:
-        conn = get_db_connection()
-        with conn:
-            crud.get_or_create_user(conn, username)
-            for s in siglas_data:
-                sigla_name = s.get("id")
-                owner_username = s.get("owner")
-                if sigla_name:
-                    crud.get_or_create_sigla(conn, sigla_name, owner_username)
-        conn.close()
-    except Exception as e:
-        print(f"Error syncing siglas: {e}")
 
     return {"user": username, "siglas": siglas_data}
 
-@app.post("/ingestion/start")
-async def start_ingestion(
-    body: IngestionRequest,
-    username: str = Depends(get_current_user),
-):
-    try:
-        ingestion_id = crud.start_ingestion_db(username, body)
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Erro ao iniciar fluxo de ingestão no banco: {e}"
-        )
-
-    return {
-        "status": "started",
-        "user": username,
-        "ingestion_id": ingestion_id,
-        "sigla": body.sigla,
-        "fonte": body.fonte,
-        "tabela": body.tabela,
-        "descricao": body.descricao,
-        "proximo_passo": "metadata",
-    }
 
 @app.post("/ingestion/submit")
 async def submit_ingestion(
-    body: FullIngestionRequest,
     username: str = Depends(get_current_user),
+    body: dict = {}
 ):
-    try:
-        ingestion_id = crud.submit_ingestion_db(username, body)
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Erro ao salvar ingestão completa: {e}"
-        )
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.post(
+                f"{METADATA_SERVICE_URL}/ingestions",
+                json=body.dict(),
+                timeout=10.0,
+            )
+            response.raise_for_status()
+            ingestion_id = response.json().get("ingestion_id")
+        except httpx.HTTPStatusError as e:
+            raise HTTPException(
+                status_code=e.response.status_code,
+                detail=f"Erro do metadata_service: {e.response.text}",
+            )
+        except httpx.RequestError as e:
+            raise HTTPException(
+                status_code=503,
+                detail=f"Metadata service indisponível: {e}",
+            )
         
     return {
         "status": "success",
@@ -112,39 +83,55 @@ async def submit_ingestion(
 
 @app.get("/ingestion/list")
 async def list_ingestions(username: str = Depends(get_current_user)):
-    try:
-        return crud.get_ingestions_list()
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get(f"{METADATA_SERVICE_URL}/ingestions/list", timeout=10.0)
+            response.raise_for_status()
+            return response.json()
+        except httpx.HTTPStatusError as e:
+            raise HTTPException(status_code=e.response.status_code, detail=f"Erro do metadata_service: {e.response.text}")
+        except httpx.RequestError as e:
+            raise HTTPException(status_code=503, detail=f"Metadata service indisponível: {e}")
 
 @app.get("/ingestion/detail/{ingestion_id}")
 async def get_ingestion_detail(ingestion_id: int, username: str = Depends(get_current_user)):
-    try:
-        detail = crud.get_ingestion_detail_db(ingestion_id)
-        if not detail:
-            raise HTTPException(status_code=404, detail="Ingestão não encontrada")
-        return detail
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get(f"{METADATA_SERVICE_URL}/ingestions/{ingestion_id}", timeout=10.0)
+            response.raise_for_status()
+            return response.json()
+        except httpx.HTTPStatusError as e:
+            raise HTTPException(status_code=e.response.status_code, detail=f"Erro do metadata_service: {e.response.text}")
+        except httpx.RequestError as e:
+            raise HTTPException(status_code=503, detail=f"Metadata service indisponível: {e}")
+        
 
 @app.get("/ingestion/fontes")
 async def get_ingestion_fontes(username: str = Depends(get_current_user)):
-    try:
-        return {"fontes": crud.get_fontes_list()}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get(f"{METADATA_SERVICE_URL}/ingestions/fontes", timeout=10.0)
+            print("Response from metadata_service:", response.status_code, response.text)  # Debug log
+            response.raise_for_status()
+            return response.json()
+        except httpx.HTTPStatusError as e:
+            raise HTTPException(status_code=e.response.status_code, detail=f"Erro do metadata_service: {e.response.text}")
+        except httpx.RequestError as e:
+            raise HTTPException(status_code=503, detail=f"Metadata service indisponível: {e}")
 
+
+#/ingestions/tabelas/{fonte}
 @app.get("/ingestion/tabelas/{fonte}")
 async def get_ingestion_tabelas(fonte: str, username: str = Depends(get_current_user)):
-    try:
-        return {
-            "fonte": fonte,
-            "tabelas": crud.get_tabelas_list(fonte)
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get(f"{METADATA_SERVICE_URL}/ingestions/tabelas/{fonte}", timeout=10.0)
+            response.raise_for_status()
+            return response.json()
+        except httpx.HTTPStatusError as e:
+            raise HTTPException(status_code=e.response.status_code, detail=f"Erro do metadata_service: {e.response.text}")
+        except httpx.RequestError as e:
+            raise HTTPException(status_code=503, detail=f"Metadata service indisponível: {e}")
 
 @app.get("/ingestion/tabelas/formato/{fonte}")
 async def get_formato_arquivo_origem(fonte: str, username: str = Depends(get_current_user)):
@@ -173,21 +160,26 @@ async def get_ingestion_metadados(tabela: str, username: str = Depends(get_curre
         }
     }
 
+#ingestions/pii_types
+
 @app.get("/ingestion/colunas/{tabela}")
 async def get_table_columns(tabela: str, username: str = Depends(get_current_user)):
-    try:
-        pii_types = crud.get_pii_types_list()
-        return {
-            "colunas": [],
-            "opcoes": {
-                "dataTypes": ["STRING", "INTEGER", "BIGINT", "FLOAT", "DATE", "TIMESTAMP", "BOOLEAN"],
-                "chavePrimaria": ["Sim", "Não"],
-                "pii": ["Sim", "Não"],
-                "piiTypes": pii_types
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get(f"{METADATA_SERVICE_URL}/ingestions/pii_types", timeout=10.0)
+            response.raise_for_status()
+            pii_types = response.json().get("piiTypes", [])
+            return {
+                "colunas": [],
+                "opcoes": {
+                    "dataTypes": ["STRING", "INTEGER", "BIGINT", "FLOAT", "DATE", "TIMESTAMP", "BOOLEAN"],
+                    "chavePrimaria": ["Sim", "Não"],
+                    "pii": ["Sim", "Não"],
+                    "piiTypes": pii_types
+                }
             }
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/ingestion/coluna/particao/{tabela}")
 async def get_coluna_particao(tabela: str, body: dict, username: str = Depends(get_current_user)):
@@ -212,36 +204,15 @@ async def gerar_dicionario_ia(body: dict, username: str = Depends(get_current_us
         "colunas": colunas_desc
     }
 
+
 @app.get("/ingestion/quality_rules/{tabela}")
 async def quality_rules(tabela: str, username: str = Depends(get_current_user)):
-    try:
-        return {
-            "colunas": [],
-            "regras": crud.get_quality_rules_list()
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/ingestion/approve/{ingestion_id}")
-async def approve_ingestion(ingestion_id: int, username: str = Depends(get_current_user)):
-    try:
-        crud.approve_ingestion_db(ingestion_id)
-        return {"status": "approved", "ingestion_id": ingestion_id}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/ingestion/reject/{ingestion_id}")
-async def reject_ingestion(ingestion_id: int, username: str = Depends(get_current_user)):
-    try:
-        crud.reject_ingestion_db(ingestion_id)
-        return {"status": "rejected", "ingestion_id": ingestion_id}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.delete("/ingestion/{ingestion_id}")
-async def delete_ingestion(ingestion_id: int, username: str = Depends(get_current_user)):
-    try:
-        crud.delete_ingestion_db(ingestion_id)
-        return {"status": "deleted", "ingestion_id": ingestion_id}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get(f"{METADATA_SERVICE_URL}/ingestions/quality_rules", timeout=10.0)
+            response.raise_for_status()
+            return response.json()
+        except httpx.HTTPStatusError as e:
+            raise HTTPException(status_code=e.response.status_code, detail=f"Erro do metadata_service: {e.response.text}")
+        except httpx.RequestError as e:
+            raise HTTPException(status_code=503, detail=f"Metadata service indisponível: {e}")

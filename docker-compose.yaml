@@ -47,21 +47,37 @@ services:
     depends_on:
       - auth_service
       - postgres_db
+      - metadata_service
+    environment:
+      - DATABASE_URL=postgresql://user:password@postgres_db:5432/data_catalog
+      - METADATA_SERVICE_URL=http://metadata_service:8002
+    networks:
+      - app-network
+
+  metadata_service:
+    build: ./metadata_service
+    container_name: metadata_service
+    ports:
+      - "8002:8002"
+    depends_on:
+      - postgres_db
     environment:
       - DATABASE_URL=postgresql://user:password@postgres_db:5432/data_catalog
     networks:
       - app-network
-    #metadata_service:
-    #build: ./metadata_service
-    #container_name: metadata_service
-    #ports:
-    #  - "8002:8002"
-    #depends_on:
-    #  - postgres_db
-    #environment:
-    #  - DATABASE_URL=postgresql://user:password@postgres_db:5432/data_catalog
-    #networks:
-    #  - app-network
+
+  approval_service:
+    build: ./approval_service
+    container_name: approval_service
+    ports:
+      - "8003:8003"
+    depends_on:
+      - auth_service
+      - ingestion_service
+    environment:
+      - DATABASE_URL=postgresql://user:password@postgres_db:5432/data_catalog
+    networks:
+      - app-network
 
   frontend:
     build: ./frontend
