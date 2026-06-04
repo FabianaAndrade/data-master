@@ -156,6 +156,45 @@ async def cancel_ingestion(ingestion_id: int, username: str = Depends(get_curren
         except httpx.RequestError as e:
             raise HTTPException(status_code=503, detail=f"Metadata service indisponível: {e}")
 
+@app.delete("/ingestion/delete/{ingestion_id}")
+async def delete_ingestion(ingestion_id: int, username: str = Depends(get_current_user)):
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.delete(
+                f"{METADATA_SERVICE_URL}/ingestions/{ingestion_id}",
+                params={"username": username},
+                timeout=10.0,
+            )
+            response.raise_for_status()
+            return response.json()
+        except httpx.HTTPStatusError as e:
+            raise HTTPException(
+                status_code=e.response.status_code,
+                detail=e.response.json().get("detail", e.response.text),
+            )
+        except httpx.RequestError as e:
+            raise HTTPException(status_code=503, detail=f"Metadata service indisponível: {e}")
+
+@app.put("/ingestion/edit/{ingestion_id}")
+async def edit_ingestion(ingestion_id: int, body: dict, username: str = Depends(get_current_user)):
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.put(
+                f"{METADATA_SERVICE_URL}/ingestions/{ingestion_id}",
+                json=body,
+                params={"username": username},
+                timeout=10.0,
+            )
+            response.raise_for_status()
+            return response.json()
+        except httpx.HTTPStatusError as e:
+            raise HTTPException(
+                status_code=e.response.status_code,
+                detail=e.response.json().get("detail", e.response.text),
+            )
+        except httpx.RequestError as e:
+            raise HTTPException(status_code=503, detail=f"Metadata service indisponível: {e}")
+
 @app.get("/ingestion/fontes")
 async def get_ingestion_fontes(username: str = Depends(get_current_user)):
     async with httpx.AsyncClient() as client:

@@ -349,7 +349,8 @@ def get_ingestion_detail_db(ingestion_id: int):
                     icm.column_description as descricao,
                     icm.data_type as tipo_dado,
                     icm.partition_column as particao,
-                    pt.pii_name as pii,
+                    icm.pii as pii,
+                    pt.pii_name as pii_tipo,
                     (
                         SELECT string_agg(qr.rule_name, ', ') 
                         FROM "columns_quality_rules" cqr
@@ -451,15 +452,59 @@ def approve_ingestion_db(ingestion_id: int, approved_by: int):
     conn = get_db_connection()
     try:
         with conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    UPDATE "ingestions"
-                    SET "status" = 'APPROVED', "last_operation" = 'APPROVE', "last_updated_by" = %s
-                    WHERE "ingestion_id" = %s;
-                    """,
-                    (approved_by, ingestion_id)
-                )
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                # Check current status to determine what approval means
+                cur.execute('SELECT "status" FROM "ingestions" WHERE "ingestion_id" = %s;', (ingestion_id,))
+                row = cur.fetchone()
+                if not row:
+                    return
+
+                if row["status"] == "PENDING_DELETE":
+                    # Approving a deletion request: mark as DELETED (soft delete confirmed)
+                    cur.execute(
+                        """
+                        UPDATE "ingestions"
+                        SET "status" = 'DELETED', "last_operation" = 'DELETE_APPROVED', "last_updated_by" = %s
+                        WHERE "ingestion_id" = %s;
+                        """,
+                        (approved_by, ingestion_id)
+                    )
+                else:
+                    # Normal approval ( Creation or Edit )
+                    # Find the latest version (which is pending)
+                    cur.execute('SELECT MAX(version) as max_v FROM "ingestions_table_metadata" WHERE "ingestion_id" = %s;', (ingestion_id,))
+                    max_row = cur.fetchone()
+                    if max_row and max_row["max_v"]:
+                        pending_version = max_row["max_v"]
+                        
+                        # Deactivate all versions
+                        cur.execute(
+                            'UPDATE "ingestions_table_metadata" SET "is_active" = FALSE WHERE "ingestion_id" = %s;',
+                            (ingestion_id,)
+                        )
+                        # Activate the pending version
+                        cur.execute(
+                            'UPDATE "ingestions_table_metadata" SET "is_active" = TRUE WHERE "ingestion_id" = %s AND "version" = %s;',
+                            (ingestion_id, pending_version)
+                        )
+                        
+                        cur.execute(
+                            """
+                            UPDATE "ingestions"
+                            SET "status" = 'APPROVED', "last_operation" = 'APPROVE', "last_updated_by" = %s, "active_version" = %s
+                            WHERE "ingestion_id" = %s;
+                            """,
+                            (approved_by, pending_version, ingestion_id)
+                        )
+                    else:
+                        cur.execute(
+                            """
+                            UPDATE "ingestions"
+                            SET "status" = 'APPROVED', "last_operation" = 'APPROVE', "last_updated_by" = %s
+                            WHERE "ingestion_id" = %s;
+                            """,
+                            (approved_by, ingestion_id)
+                        )
     finally:
         if conn:
             conn.close()
@@ -481,17 +526,70 @@ def reject_ingestion_db(ingestion_id: int, rejected_by: int):
         if conn:
             conn.close()
 
-def delete_ingestion_db(ingestion_id: int):
+def delete_ingestion_db(ingestion_id: int, username: str = None):
+    """
+    Solicita a exclusão de uma ingestão (soft delete).
+    Marca a ingestão como PENDING_DELETE para que passe pelo fluxo de aprovação.
+    Os dados NÃO são removidos do banco — apenas o status é alterado.
+    Retorna dict com resultado da operação.
+    """
     conn = get_db_connection()
     try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            # Verifica se a ingestão existe
+            cur.execute('SELECT "ingestion_id", "status" FROM "ingestions" WHERE "ingestion_id" = %s;', (ingestion_id,))
+            row = cur.fetchone()
+            if not row:
+                return {"error": "not_found", "message": "Ingestão não encontrada."}
+
+            # Não permite solicitar exclusão de ingestão já marcada para exclusão
+            if row["status"] in ("PENDING_DELETE", "DELETED"):
+                return {"error": "already_deleted", "message": "Esta ingestão já está marcada para exclusão ou já foi excluída."}
+
+            # Verifica permissão: se username informado, checar se é o criador ou owner da sigla
+            if username:
+                cur.execute("""
+                    SELECT cb.full_name as creator_name, cb.email as creator_email,
+                           ow.full_name as owner_name, ow.email as owner_email
+                    FROM "ingestions" i
+                    LEFT JOIN "users" cb ON i.created_by = cb.user_id
+                    LEFT JOIN "siglas" s ON i.sigla_id = s.sigla_id
+                    LEFT JOIN "users" ow ON s.owner_id = ow.user_id
+                    WHERE i.ingestion_id = %s;
+                """, (ingestion_id,))
+                perm_row = cur.fetchone()
+                if perm_row:
+                    is_allowed = username in (
+                        perm_row.get("creator_name") or "",
+                        perm_row.get("creator_email") or "",
+                        perm_row.get("owner_name") or "",
+                        perm_row.get("owner_email") or "",
+                    )
+                    if not is_allowed:
+                        return {"error": "forbidden", "message": "Você não tem permissão para solicitar exclusão desta ingestão."}
+
+        # Soft delete: marcar como PENDING_DELETE para aprovação
         with conn:
             with conn.cursor() as cur:
+                user_id = None
+                if username:
+                    cur.execute('SELECT user_id FROM "users" WHERE full_name = %s OR email = %s;', (username, username))
+                    user_id_row = cur.fetchone()
+                    user_id = user_id_row[0] if user_id_row else None
+
                 cur.execute(
                     """
-                    DELETE FROM "ingestions" WHERE "ingestion_id" = %s;
+                    UPDATE "ingestions"
+                    SET "status" = 'PENDING_DELETE',
+                        "last_operation" = 'DELETE',
+                        "last_updated_by" = %s,
+                        "should_be_approved_until" = CURRENT_DATE + INTERVAL '10 days'
+                    WHERE "ingestion_id" = %s;
                     """,
-                    (ingestion_id,)
+                    (user_id, ingestion_id)
                 )
+
+        return {"ok": True, "message": f"Solicitação de exclusão da ingestão {ingestion_id} enviada para aprovação."}
     finally:
         if conn:
             conn.close()
@@ -566,7 +664,7 @@ def get_pending_ingestions_for_owner(owner_username: str):
                 LEFT JOIN "ingestions_table_metadata" itm
                        ON i.ingestion_id = itm.ingestion_id
                       AND i.active_version = itm.version
-                WHERE i.status = 'PENDING_APPROVAL'
+                WHERE i.status IN ('PENDING_APPROVAL', 'PENDING_DELETE')
                   AND (ow.full_name = %s OR ow.email = %s)
                 ORDER BY i.should_be_approved_until ASC;
                 """,
@@ -641,3 +739,99 @@ def get_user_by_username(username: str):
     finally:
         if conn:
             conn.close()
+
+
+def create_new_version_for_ingestion(conn, ingestion_id: int, request) -> dict:
+    """
+    Cria uma nova versão para uma ingestão existente.
+    - Incrementa version baseado na versão ativa atual
+    - Marca a versão anterior como is_active = FALSE
+    - Insere novos metadados de tabela e colunas
+    - Atualiza active_version e status na tabela ingestions
+    """
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        # 1. Buscar versão ativa atual
+        cur.execute(
+            'SELECT "active_version" FROM "ingestions" WHERE "ingestion_id" = %s;',
+            (ingestion_id,)
+        )
+        row = cur.fetchone()
+        if not row:
+            raise Exception(f"Ingestão {ingestion_id} não encontrada.")
+
+        current_version = row["active_version"] or 0
+        new_version = current_version + 1
+
+        # 2. A versão anterior CONTINUA ATIVA até que a nova seja aprovada.
+        # Não marcamos is_active = FALSE aqui.
+
+        # 3. Inserir novos metadados da tabela
+        tm = request.table_metadata
+        inicio_atualizacao = parse_date(tm.inicio_atualizacao) if tm.inicio_atualizacao else None
+        data_criacao = parse_date(tm.data_criacao) if tm.data_criacao else None
+
+        cur.execute(
+            """
+            INSERT INTO "ingestions_table_metadata" (
+                "ingestion_id", "version", "created_at", "is_active",
+                "table_name", "table_description", "origin", "layer",
+                "origin_format", "periodicity", "ingestion_type", "inicial_date_update"
+            )
+            VALUES (%s, %s, COALESCE(%s, CURRENT_DATE), FALSE, %s, %s, %s, %s, %s, %s, %s, %s);
+            """,
+            (
+                ingestion_id, new_version, data_criacao,
+                tm.table_name, tm.table_description,
+                tm.origin_id, tm.layer,
+                tm.origin_format, tm.periodicity,
+                tm.ingestion_type, inicio_atualizacao
+            )
+        )
+
+        # 4. Buscar mapa de PII types
+        cur.execute('SELECT "pii_name", "pii_id" FROM "pii_types";')
+        pii_map = {r["pii_name"]: r["pii_id"] for r in cur.fetchall()}
+
+        # 5. Inserir colunas da nova versão
+        for col in request.columns:
+            pii_id = pii_map.get(str(col.pii_type_id)) if col.pii else None
+            # Se pii_type_id for numérico, usar diretamente
+            if col.pii and isinstance(col.pii_type_id, int) and col.pii_type_id > 0:
+                pii_id = col.pii_type_id
+
+            cur.execute(
+                """
+                INSERT INTO "ingestions_columns_metadata" (
+                    "ingestion_id", "version", "column_name", "column_description",
+                    "data_type", "pii", "pii_id", "partition_column"
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s);
+                """,
+                (
+                    ingestion_id, new_version,
+                    col.column_name, col.column_description,
+                    col.data_type,
+                    "Sim" if col.pii else "Não",
+                    pii_id,
+                    "Sim" if col.partition_column else "Não"
+                )
+            )
+
+        # 6. Atualizar ingestion: status para PENDING_APPROVAL, operação = EDIT
+        # NOTA: NÃO atualizamos active_version aqui! Ele só será atualizado quando for aprovado.
+        cur.execute(
+            """
+            UPDATE "ingestions"
+            SET "status" = 'PENDING_APPROVAL',
+                "last_operation" = 'EDIT',
+                "should_be_approved_until" = CURRENT_DATE + INTERVAL '10 days'
+            WHERE "ingestion_id" = %s;
+            """,
+            (ingestion_id,)
+        )
+
+    return {
+        "ingestion_id": ingestion_id,
+        "new_version": new_version,
+        "message": f"Nova versão {new_version} criada com sucesso."
+    }

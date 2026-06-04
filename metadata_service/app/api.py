@@ -9,13 +9,14 @@ from .schemas import  FullIngestionRequest
 #from .schemas.IngestionUpdateRequest import IngestionRequestUpdate
 from .database import get_db_connection
 
+from typing import Optional, Union
+
 class ColumnMetadata(BaseModel):
     column_name: str
     data_type: str
     column_description: str
-    data_type: str
     pii: bool
-    pii_type_id: int
+    pii_type_id: Optional[Union[int, str]] = None
     partition_column: bool
 
 class TableMetadata(BaseModel):
@@ -28,6 +29,8 @@ class TableMetadata(BaseModel):
     ingestion_type: str
     inicio_atualizacao: str
     tipo_atualizacao: str
+    data_criacao: Optional[str] = None
+    horario: Optional[str] = None
 
 class IngestionRequestUpdate(BaseModel):
     table_metadata: TableMetadata
@@ -157,17 +160,30 @@ def create_ingestion(request: FullIngestionRequest, username: str = "system"):
 
 
 @router.put("/ingestions/{ingestion_id}", status_code=200, response_model=Dict[str, Any])
-def update_ingestion(ingestion_id: str, request: IngestionRequestUpdate):
+def update_ingestion(ingestion_id: int, request: IngestionRequestUpdate, username: str = None):
     """
     Cria uma nova versão para uma ingestão existente a partir de uma solicitação de edição.
+    Parâmetro opcional: ?username= para registrar quem editou.
+    Consumido pelo ingestion_service (middleware).
     """
+    conn = get_db_connection()
     try:
-        conn = next(get_db_connection())
-        result = crud.create_new_version_for_ingestion(conn, ingestion_id=ingestion_id, request=request)
-        conn.commit()
+        with conn:
+            result = crud.create_new_version_for_ingestion(conn, ingestion_id=ingestion_id, request=request)
+            if username:
+                user = crud.get_user_by_username(username)
+                if user:
+                    with conn.cursor() as cur:
+                        cur.execute(
+                            'UPDATE "ingestions" SET "last_updated_by" = %s WHERE "ingestion_id" = %s;',
+                            (user["user_id"], ingestion_id)
+                        )
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An error occurred: {e}")
+    finally:
+        if conn:
+            conn.close()
 
 @router.post("/ingestions/{ingestion_id}/request-delete", status_code=200, response_model=Dict[str, str])
 def request_ingestion_deletion(ingestion_id: str):
@@ -181,6 +197,25 @@ def request_ingestion_deletion(ingestion_id: str):
         return {"ingestion_id": ingestion_id, "message": "Deletion requested successfully."}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An error occurred: {e}")
+
+
+@router.delete("/ingestions/{ingestion_id}", status_code=200, response_model=Dict[str, str])
+def delete_ingestion(ingestion_id: int, username: str = None):
+    """
+    Solicita a exclusão de uma ingestão (soft delete).
+    Marca como PENDING_DELETE para aprovação — os dados NÃO são removidos do banco.
+    Parâmetro opcional: ?username= para verificação de permissão.
+    Consumido pelo ingestion_service (middleware).
+    """
+    result = crud.delete_ingestion_db(ingestion_id=ingestion_id, username=username)
+    if "error" in result:
+        if result["error"] == "not_found":
+            raise HTTPException(status_code=404, detail=result["message"])
+        if result["error"] == "already_deleted":
+            raise HTTPException(status_code=409, detail=result["message"])
+        if result["error"] == "forbidden":
+            raise HTTPException(status_code=403, detail=result["message"])
+    return {"ingestion_id": str(ingestion_id), "message": result["message"]}
 
 
 # =====================================================================

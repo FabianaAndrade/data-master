@@ -5,12 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "../hooks/use-auth";
 import { toast } from "sonner";
-import { Loader2, XOctagon } from "lucide-react";
+import { Loader2, XOctagon, Trash2 } from "lucide-react";
 
 interface ColumnDetail {
   nome: string;
   descricao: string;
   pii: string;
+  pii_tipo: string;
   dq_rule: string;
   tipo_dado: string;
   particao: string;
@@ -44,6 +45,7 @@ const IngestionDetail = () => {
   const [detail, setDetail] = useState<IngestionDetailData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleCancel = async () => {
     if (!user?.token || !id) return;
@@ -68,6 +70,32 @@ const IngestionDetail = () => {
       toast.error("Erro ao tentar cancelar ingestão.");
     } finally {
       setIsCancelling(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!user?.token || !id) return;
+    if (!confirm("Tem certeza que deseja solicitar a exclusão desta ingestão? A solicitação precisará ser aprovada pelo gestor.")) return;
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`${INGESTION_SERVICE_URL}/ingestion/delete/${id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${user.token}`,
+          "Content-Type": "application/json",
+        },
+      });
+      if (res.ok) {
+        toast.success("Solicitação de exclusão enviada para aprovação.");
+        navigate("/");
+      } else {
+        const err = await res.json().catch(() => ({}));
+        toast.error(err.detail ?? "Erro ao solicitar exclusão.");
+      }
+    } catch {
+      toast.error("Erro ao tentar solicitar exclusão.");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -120,6 +148,9 @@ const IngestionDetail = () => {
     switch (status) {
       case "APPROVED": return "Aprovada";
       case "REJECTED": return "Rejeitada";
+      case "PENDING_DELETE": return "Exclusão Pendente";
+      case "DELETED": return "Excluída";
+      case "CANCELLED": return "Cancelada";
       default: return "Pendente de Aprovação";
     }
   };
@@ -211,7 +242,7 @@ const IngestionDetail = () => {
               <span>Tipo de Dado</span>
               <span>Descrição</span>
               <span>PII / LGPD</span>
-              <span>Regra de Qualidade</span>
+              <span>Tipo PII</span>
               <span>Partição</span>
             </div>
             <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
@@ -222,7 +253,7 @@ const IngestionDetail = () => {
                     <Input value={col.tipo_dado || "N/A"} readOnly className="bg-muted text-xs font-mono" />
                     <Input value={col.descricao || "Sem descrição"} readOnly className="bg-muted text-xs" />
                     <Input value={col.pii || "N/A"} readOnly className="bg-muted text-xs font-medium" />
-                    <Input value={col.dq_rule || "Nenhuma"} readOnly className="bg-muted text-xs" />
+                    <Input value={col.pii_tipo || "N/A"} readOnly className="bg-muted text-xs" />
                     <Input value={col.particao || "Não"} readOnly className="bg-muted text-xs font-medium" />
                   </div>
                 ))
@@ -233,6 +264,22 @@ const IngestionDetail = () => {
           </div>
 
           <div className="flex gap-4 justify-end pt-4">
+            {/* Excluir: disponível para o criador/owner */}
+            {detail.status !== "CANCELLED" && detail.status !== "PENDING_DELETE" && detail.status !== "DELETED" && (
+              <Button
+                variant="destructive"
+                className="gap-2"
+                disabled={isDeleting}
+                onClick={handleDelete}
+              >
+                {isDeleting ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Trash2 className="w-4 h-4" />
+                )}
+                Solicitar exclusão
+              </Button>
+            )}
             {/* Cancelar: apenas se não for APPROVED nem CANCELLED */}
             {detail.status !== "APPROVED" && detail.status !== "CANCELLED" && (
               <Button
@@ -260,3 +307,4 @@ const IngestionDetail = () => {
 };
 
 export default IngestionDetail;
+

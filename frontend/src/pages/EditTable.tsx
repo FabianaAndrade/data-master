@@ -1,253 +1,539 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import StepIndicator from "@/components/StepIndicator";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Pencil, PlusCircle } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useAuth } from "../hooks/use-auth";
 import { toast } from "sonner";
+import { Loader2, Pencil, PlusCircle, Trash2, ArrowLeft, Save } from "lucide-react";
 
+const INGESTION_SERVICE_URL = (import.meta as any).env.VITE_INGESTION_SERVICE_URL ?? "http://localhost:8001";
 const TOTAL_STEPS = 4;
 
-const mockTableData = {
-  sigla: "MKTI",
-  dataInicio: "01/05/2026",
-  tabela: "TABE_ORAC_ANUNCIOS",
-  descricao: "Tabela com informacoes de clientes devedores em 2025",
-  periodicidade: "Diaria",
-  horario: "14h30",
-  datRefCarga: "SIM",
-  tipoAtualizacao: "Batch",
-  colunas: [
-    { nome: "CD_CLIE(INTEGER)_PK", descricao: "CD_CLIE", pii: "CPF", dqRule: "VALIDA_NULOS" },
-    { nome: "CD_BAND_CAR(INTEGER_PK)", descricao: "CD_BAND_CART", pii: "NÃO", dqRule: "VALIDA_BANDEIRA_CARTAO" },
-  ],
-};
+interface Ingestion { id: number; tabela: string; status: string; detalhe: string; responsavel: string; sigla: string; }
+
+interface ColumnDetail {
+  nome: string; descricao: string; pii: string; pii_tipo: string; dq_rule: string;
+  tipo_dado: string; particao: string;
+}
+
+interface IngestionDetailData {
+  id: number; tabela_nome: string; criado_em: string; sigla: string;
+  inicio_ingestao: string; data_criacao: string; descricao: string;
+  periodicidade: string; formato_origem: string; tipo_atualizacao: string;
+  status: string; aprovador: string; camada: string; sistema_origem: string;
+  colunas: ColumnDetail[];
+}
+
+interface EditableColumn {
+  column_name: string; data_type: string; column_description: string;
+  pii: boolean; pii_type_id: string; partition_column: boolean;
+}
+
+const DATA_TYPES = ["STRING", "INTEGER", "BIGINT", "FLOAT", "DATE", "TIMESTAMP", "BOOLEAN"];
 
 const EditTable = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [step, setStep] = useState(0);
 
-  // Step 1
-  const [sigla, setSigla] = useState("");
-  const [gestorAprovador, setGestorAprovador] = useState("");
+  const [ingestions, setIngestions] = useState<Ingestion[]>([]);
+  const [isLoadingList, setIsLoadingList] = useState(true);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [detail, setDetail] = useState<IngestionDetailData | null>(null);
+  const [isLoadingDetail, setIsLoadingDetail] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Step 2
-  const [tabela, setTabela] = useState("");
-  const [gestorAprovador2, setGestorAprovador2] = useState("");
+  // Editable fields
+  const [tableName, setTableName] = useState("");
+  const [tableDescription, setTableDescription] = useState("");
+  const [originFormat, setOriginFormat] = useState("");
+  const [periodicity, setPeriodicity] = useState("");
+  const [ingestionType, setIngestionType] = useState("");
+  const [layer, setLayer] = useState("RAW");
+  const [dataCriacao, setDataCriacao] = useState("");
+  const [dataAtualizacao, setDataAtualizacao] = useState("");
+  const [horario, setHorario] = useState("");
+  const [columns, setColumns] = useState<EditableColumn[]>([]);
+  const [partitionColumn, setPartitionColumn] = useState("Nenhuma");
 
-  // Step 3 - editable fields
-  const [editData, setEditData] = useState(mockTableData);
-  const [editingColunas, setEditingColunas] = useState(false);
+  const piiTypes = ["N/A", "CPF", "CNPJ", "Email", "Nome", "RG", "Telefone", "Endereço"];
 
-  const next = () => setStep((s) => Math.min(s + 1, TOTAL_STEPS - 1));
+  useEffect(() => {
+    async function fetchIngestions() {
+      if (!user?.token) return;
+      try {
+        const res = await fetch(`${INGESTION_SERVICE_URL}/ingestion/list`, {
+          headers: { Authorization: `Bearer ${user.token}` },
+        });
+        if (res.status === 401) { localStorage.removeItem("auth_user"); window.location.href = "/login"; return; }
+        if (res.ok) { const data = await res.json(); setIngestions(data.ingestions || []); }
+      } catch { toast.error("Erro ao carregar ingestões."); }
+      finally { setIsLoadingList(false); }
+    }
+    fetchIngestions();
+  }, [user]);
+
+  const handleSelectIngestion = async (id: number) => {
+    if (!user?.token) return;
+    setSelectedId(id);
+    setIsLoadingDetail(true);
+    setStep(1);
+    try {
+      const res = await fetch(`${INGESTION_SERVICE_URL}/ingestion/detail/${id}`, {
+        headers: { Authorization: `Bearer ${user.token}` },
+      });
+      if (res.ok) {
+        const data: IngestionDetailData = await res.json();
+        setDetail(data);
+        setTableName(data.tabela_nome || "");
+        setTableDescription(data.descricao || "");
+        setOriginFormat(data.formato_origem || "");
+        setPeriodicity(data.periodicidade || "");
+        setIngestionType(data.tipo_atualizacao || "");
+        setLayer(data.camada || "RAW");
+        setDataCriacao(data.data_criacao ? data.data_criacao.split("T")[0] : "");
+        setDataAtualizacao(data.inicio_ingestao ? data.inicio_ingestao.split("T")[0] : "");
+        setHorario(""); // horario is not in db schema
+        setColumns((data.colunas || []).map(c => ({
+          column_name: c.nome,
+          data_type: c.tipo_dado || "STRING",
+          column_description: c.descricao || "",
+          pii: (c.pii && c.pii !== "N/A" && c.pii !== "Não") ? true : false,
+          pii_type_id: c.pii_tipo || "N/A",
+          partition_column: c.particao === "Sim",
+        })));
+        const partitionCol = data.colunas?.find(c => c.particao === "Sim");
+        setPartitionColumn(partitionCol ? partitionCol.nome : "Nenhuma");
+      } else { toast.error("Erro ao carregar detalhes."); setStep(0); }
+    } catch { toast.error("Erro ao carregar detalhes."); setStep(0); }
+    finally { setIsLoadingDetail(false); }
+  };
+
+  const addColumn = () => {
+    setColumns([...columns, { column_name: "", data_type: "STRING", column_description: "", pii: false, pii_type_id: "N/A", partition_column: false }]);
+  };
+
+  const removeColumn = (idx: number) => {
+    setColumns(columns.filter((_, i) => i !== idx));
+  };
+
+  const updateColumn = (idx: number, field: keyof EditableColumn, value: any) => {
+    const updated = [...columns];
+    (updated[idx] as any)[field] = value;
+    setColumns(updated);
+  };
+
+  const handleSubmit = async () => {
+    if (!user?.token || !selectedId) return;
+    if (columns.length === 0) { toast.error("Adicione ao menos uma coluna."); return; }
+    if (columns.some(c => !c.column_name)) { toast.error("Todas as colunas precisam de um nome."); return; }
+
+    setIsSubmitting(true);
+    const body = {
+      table_metadata: {
+        table_name: tableName,
+        table_description: tableDescription,
+        layer: layer,
+        origin_id: 1,
+        origin_format: originFormat,
+        periodicity: periodicity,
+        ingestion_type: ingestionType,
+        inicio_atualizacao: dataAtualizacao,
+        data_criacao: dataCriacao,
+        horario: horario,
+        tipo_atualizacao: ingestionType,
+      },
+      columns: columns.map(c => ({
+        ...c,
+        partition_column: c.column_name === partitionColumn,
+        pii_type_id: c.pii ? c.pii_type_id : "N/A"
+      })),
+    };
+
+    try {
+      const res = await fetch(`${INGESTION_SERVICE_URL}/ingestion/edit/${selectedId}`, {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${user.token}`, "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (res.ok) {
+        toast.success("Edição enviada para aprovação! Aguarde o gestor aprovar as alterações.");
+        navigate("/");
+      } else {
+        const err = await res.json().catch(() => ({}));
+        toast.error(err.detail ?? "Erro ao salvar edição.");
+      }
+    } catch { toast.error("Erro ao salvar edição."); }
+    finally { setIsSubmitting(false); }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case "APPROVED": return "bg-emerald-500/10 text-emerald-500 border-emerald-500/20";
+      case "REJECTED": return "bg-destructive/10 text-destructive border-destructive/20";
+      case "CANCELLED": return "bg-gray-500/10 text-gray-500 border-gray-500/20";
+      case "PENDING_DELETE": return "bg-rose-500/10 text-rose-500 border-rose-500/20";
+      case "DELETED": return "bg-gray-500/10 text-gray-400 border-gray-400/20";
+      default: return "bg-amber-500/10 text-amber-500 border-amber-500/20";
+    }
+  };
+  const getStatusLabel = (s: string) => {
+    switch (s) { case "APPROVED": return "Aprovada"; case "REJECTED": return "Rejeitada"; case "CANCELLED": return "Cancelada"; case "PENDING_DELETE": return "Exclusão Pendente"; case "DELETED": return "Excluída"; default: return "Pendente"; }
+  };
 
   const renderStep = () => {
     switch (step) {
+      // ===== STEP 0: Lista de ingestões =====
       case 0:
         return (
-          <div className="rounded-lg border border-border p-8 space-y-6">
-            <div>
-              <h2 className="text-xl font-bold text-foreground">Editando ingestao de dados</h2>
-              <p className="text-sm text-muted-foreground">Defina sua sigla</p>
-            </div>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Sigla</label>
-                <Select value={sigla} onValueChange={setSigla}>
-                  <SelectTrigger><SelectValue placeholder="Selecione a sigla" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="MKTI">MKTI - Marketing Interno</SelectItem>
-                    <SelectItem value="FINS">FINS - Financeiro</SelectItem>
-                    <SelectItem value="RHUM">RHUM - Recursos Humanos</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Gestor Aprovador</label>
-                <Input placeholder="Rubens Silva" value={gestorAprovador} onChange={(e) => setGestorAprovador(e.target.value)} />
-              </div>
-            </div>
-            <Button className="w-full" size="lg" onClick={next}>Continue</Button>
-          </div>
-        );
-
-      case 1:
-        return (
-          <div className="rounded-lg border border-border p-8 space-y-6">
-            <div>
-              <h2 className="text-xl font-bold text-foreground">Editando tabela</h2>
-              <p className="text-sm text-muted-foreground">Escolha a tabela para adição</p>
-            </div>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Tabela</label>
-                <Select value={tabela} onValueChange={setTabela}>
-                  <SelectTrigger><SelectValue placeholder="Selecione a tabela" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="MKTI_TABE_ORAC_VENDAS">MKTI_TABE_ORAC_VENDAS</SelectItem>
-                    <SelectItem value="MKTI_TABE_CLIENTES">MKTI_TABE_CLIENTES</SelectItem>
-                    <SelectItem value="MKTI_TABE_ORAC_ANUNCIOS">MKTI_TABE_ORAC_ANUNCIOS</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Gestor Aprovador</label>
-                <Input placeholder="Rubens Silva" value={gestorAprovador2} onChange={(e) => setGestorAprovador2(e.target.value)} />
-              </div>
-            </div>
-            <Button className="w-full" size="lg" onClick={next}>Continue</Button>
-          </div>
-        );
-
-      case 2:
-        return (
           <div className="space-y-6">
-            <h2 className="text-xl font-bold text-foreground">Editando tabela</h2>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">Sigla</label>
-                <Input value={editData.sigla} readOnly className="bg-muted" />
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                  Data Inicio <Pencil className="h-3 w-3" />
-                </label>
-                <Input
-                  value={editData.dataInicio}
-                  onChange={(e) => setEditData({ ...editData, dataInicio: e.target.value })}
-                />
-              </div>
+            <div>
+              <h2 className="text-xl font-bold text-foreground">Editar Ingestão</h2>
+              <p className="text-sm text-muted-foreground mt-1">Selecione a ingestão que deseja editar.</p>
             </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                  Tabela <Pencil className="h-3 w-3" />
-                </label>
-                <Input value={editData.tabela} readOnly className="bg-muted" />
+            {isLoadingList ? (
+              <div className="rounded-lg border border-border bg-background p-8 text-center text-muted-foreground">
+                <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2 text-primary" />
+                Carregando ingestões...
               </div>
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-                  Descrição <Pencil className="h-3 w-3" />
-                </label>
-                <Input
-                  value={editData.descricao}
-                  onChange={(e) => setEditData({ ...editData, descricao: e.target.value })}
-                />
+            ) : ingestions.length === 0 ? (
+              <div className="rounded-lg border border-border bg-background p-8 text-center text-muted-foreground">
+                Nenhuma ingestão encontrada.
               </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">Periodicidade</label>
-                <Input value={editData.periodicidade} readOnly className="bg-muted" />
+            ) : (
+              <div className="space-y-3">
+                {ingestions.map((ing) => (
+                  <button key={ing.id} onClick={() => handleSelectIngestion(ing.id)}
+                    className="w-full text-left rounded-lg border border-border bg-background p-5 transition-all hover:bg-accent hover:border-primary/40 hover:shadow-sm group">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="text-base font-bold text-foreground mb-1">#{ing.id} - {ing.tabela}</h3>
+                        <div className="flex items-center gap-4 text-xs text-muted-foreground mt-2">
+                          {ing.sigla && <span>Sigla: <strong>{ing.sigla}</strong></span>}
+                          <span>Responsável: <strong>{ing.responsavel || "N/A"}</strong></span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className={`text-xs px-2.5 py-1 rounded-full border font-semibold ${getStatusColor(ing.status)}`}>
+                          {getStatusLabel(ing.status)}
+                        </span>
+                        <Pencil className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                      </div>
+                    </div>
+                  </button>
+                ))}
               </div>
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">Horario</label>
-                <Input value={editData.horario} readOnly className="bg-muted" />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">DAT_REF_CARGA</label>
-                <Input value={editData.datRefCarga} readOnly className="bg-muted" />
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">Tipo Atualização</label>
-                <Input value={editData.tipoAtualizacao} readOnly className="bg-muted" />
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <div className="grid grid-cols-4 gap-3 text-xs font-medium text-muted-foreground">
-                <span className="flex items-center gap-1">Colunas <Pencil className="h-3 w-3" /></span>
-                <span className="flex items-center gap-1">Descrição <Pencil className="h-3 w-3" /></span>
-                <span className="flex items-center gap-1">PII <Pencil className="h-3 w-3" /></span>
-                <span className="flex items-center gap-1">DQ_RULE <Pencil className="h-3 w-3" /></span>
-              </div>
-              {editData.colunas.map((col, i) => (
-                <div key={i} className="grid grid-cols-4 gap-3">
-                  <Input value={col.nome} readOnly className="bg-muted text-xs" />
-                  <Input value={col.descricao} readOnly className="bg-muted text-xs" />
-                  <Input value={col.pii} readOnly className="bg-muted text-xs" />
-                  <Input value={col.dqRule} readOnly className="bg-muted text-xs" />
-                </div>
-              ))}
-            </div>
-
-            <Button className="w-full" size="lg" onClick={next}>Continuar</Button>
-          </div>
-        );
-
-      case 3:
-        return (
-          <div className="space-y-6">
-            <h2 className="text-xl font-bold text-foreground">Resumo Edicoes</h2>
-
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">Sigla</label>
-              <Input value={editData.sigla} readOnly className="bg-muted w-64" />
-            </div>
-
-            <div className="grid grid-cols-[1fr_auto_1fr] gap-4 items-center">
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">Tabela</label>
-                <Input value={editData.tabela} readOnly className="bg-muted" />
-              </div>
-              <PlusCircle className="h-6 w-6 text-primary mt-5" />
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">Tabela</label>
-                <Input value={editData.tabela} readOnly className="bg-muted" />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-[1fr_1fr] gap-4">
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">Colunas</label>
-                <Input value="CD_CLIE(INTEGER)_PK" readOnly className="bg-muted text-xs" />
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">Colunas</label>
-                <Input value="DELETED" readOnly className="bg-muted text-xs" />
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <div className="grid grid-cols-[1fr_1fr_1fr_1fr_auto] gap-3 text-xs font-medium text-muted-foreground">
-                <span className="flex items-center gap-1">Colunas <Pencil className="h-3 w-3" /></span>
-                <span className="flex items-center gap-1">Descrição <Pencil className="h-3 w-3" /></span>
-                <span className="flex items-center gap-1">PII <Pencil className="h-3 w-3" /></span>
-                <span className="flex items-center gap-1">DQ_RULE <Pencil className="h-3 w-3" /></span>
-                <span></span>
-              </div>
-              {editData.colunas.map((col, i) => (
-                <div key={i} className="grid grid-cols-[1fr_1fr_1fr_1fr_auto] gap-3 items-center">
-                  <Input value={col.nome} readOnly className="bg-muted text-xs" />
-                  <Input value={col.descricao} readOnly className="bg-muted text-xs" />
-                  <Input value={col.pii} readOnly className="bg-muted text-xs" />
-                  <Input value={col.dqRule} readOnly className="bg-muted text-xs" />
-                  {i === editData.colunas.length - 1 && (
-                    <PlusCircle className="h-6 w-6 text-primary" />
-                  )}
-                </div>
-              ))}
-            </div>
-
-            <Button className="w-full" size="lg" onClick={() => {
-              toast.success("Edição enviada com sucesso!");
-              navigate("/");
-            }}>
-              Continuar
+            )}
+            <Button variant="outline" className="w-full" onClick={() => navigate("/")}>
+              <ArrowLeft className="w-4 h-4 mr-2" /> Voltar ao Início
             </Button>
           </div>
         );
 
-      default:
-        return null;
+      // ===== STEP 1: Detalhes (leitura) =====
+      case 1: {
+        if (isLoadingDetail) {
+          return (<div className="rounded-lg border border-border bg-background p-8 text-center text-muted-foreground">
+            <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2 text-primary" /> Carregando detalhes...
+          </div>);
+        }
+        if (!detail) return null;
+        return (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-xl font-bold text-foreground">Detalhes da Ingestão #{detail.id}</h2>
+              <p className="text-sm text-muted-foreground mt-1">Revise os dados atuais antes de editar.</p>
+            </div>
+            <div className="rounded-lg border border-border p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1"><label className="text-xs font-medium text-muted-foreground">Sigla</label>
+                  <Input value={detail.sigla || "N/A"} readOnly className="bg-muted" /></div>
+                <div className="space-y-1"><label className="text-xs font-medium text-muted-foreground">Sistema de Origem</label>
+                  <Input value={detail.sistema_origem || "N/A"} readOnly className="bg-muted" /></div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1"><label className="text-xs font-medium text-muted-foreground">Data para Criação da Tabela</label>
+                  <Input value={detail.data_criacao ? new Date(detail.data_criacao).toLocaleDateString("pt-BR") : "N/A"} readOnly className="bg-muted" /></div>
+                <div className="space-y-1"><label className="text-xs font-medium text-muted-foreground">Início das Atualizações</label>
+                  <Input value={detail.inicio_ingestao ? new Date(detail.inicio_ingestao).toLocaleDateString("pt-BR") : "N/A"} readOnly className="bg-muted" /></div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1"><label className="text-xs font-medium text-muted-foreground">Tabela</label>
+                  <Input value={detail.tabela_nome || "N/A"} readOnly className="bg-muted font-mono" /></div>
+                <div className="space-y-1"><label className="text-xs font-medium text-muted-foreground">Descrição</label>
+                  <Input value={detail.descricao || "N/A"} readOnly className="bg-muted" /></div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1"><label className="text-xs font-medium text-muted-foreground">Periodicidade</label>
+                  <Input value={detail.periodicidade || "N/A"} readOnly className="bg-muted" /></div>
+                <div className="space-y-1"><label className="text-xs font-medium text-muted-foreground">Formato de Origem</label>
+                  <Input value={detail.formato_origem || "N/A"} readOnly className="bg-muted" /></div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1"><label className="text-xs font-medium text-muted-foreground">Tipo de Atualização / Ingestão</label>
+                  <Input value={detail.tipo_atualizacao || "N/A"} readOnly className="bg-muted" /></div>
+                <div className="space-y-1"><label className="text-xs font-medium text-muted-foreground">Camada</label>
+                  <Input value={detail.camada || "RAW"} readOnly className="bg-muted font-mono" /></div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1"><label className="text-xs font-medium text-muted-foreground">Status</label>
+                  <Input value={getStatusLabel(detail.status)} readOnly className="bg-muted font-semibold" /></div>
+                <div className="space-y-1"><label className="text-xs font-medium text-muted-foreground">Gestor / Aprovador Responsável</label>
+                  <Input value={detail.aprovador || "N/A"} readOnly className="bg-muted" /></div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1"><label className="text-xs font-medium text-muted-foreground">Hora da Ingestão (Criado em)</label>
+                  <Input value={detail.criado_em ? new Date(detail.criado_em).toLocaleString("pt-BR") : "N/A"} readOnly className="bg-muted" /></div>
+              </div>
+              {detail.colunas && detail.colunas.length > 0 && (
+                <div className="space-y-2 pt-2">
+                  <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Estrutura de Colunas</p>
+                  <div className="grid grid-cols-6 gap-3 text-xs font-medium text-muted-foreground">
+                    <span>Coluna</span><span>Tipo de Dado</span><span>Descrição</span><span>PII / LGPD</span><span>Tipo PII</span><span>Partição</span>
+                  </div>
+                  {detail.colunas.map((col, i) => (
+                    <div key={i} className="grid grid-cols-6 gap-3">
+                      <Input value={col.nome} readOnly className="bg-muted text-xs font-mono" />
+                      <Input value={col.tipo_dado || "N/A"} readOnly className="bg-muted text-xs" />
+                      <Input value={col.descricao || ""} readOnly className="bg-muted text-xs" />
+                      <Input value={col.pii || "N/A"} readOnly className="bg-muted text-xs" />
+                      <Input value={col.pii_tipo || "N/A"} readOnly className="bg-muted text-xs" />
+                      <Input value={col.particao || "Não"} readOnly className="bg-muted text-xs" />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="flex gap-4">
+              <Button variant="outline" className="flex-1" onClick={() => { setStep(0); setDetail(null); }}>
+                <ArrowLeft className="w-4 h-4 mr-2" /> Voltar
+              </Button>
+              <Button className="flex-1" size="lg" onClick={() => setStep(2)}>
+                <Pencil className="w-4 h-4 mr-2" /> Editar esta ingestão
+              </Button>
+            </div>
+          </div>
+        );
+      }
+
+      // ===== STEP 2: Formulário de edição =====
+      case 2:
+        return (
+          <div className="space-y-6">
+            <h2 className="text-xl font-bold text-foreground">Editando Ingestão #{selectedId}</h2>
+
+            <div className="rounded-lg border border-border p-6 space-y-4">
+              <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Metadados da Tabela</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">Tabela <Pencil className="h-3 w-3" /></label>
+                  <Input value={tableName} onChange={(e) => setTableName(e.target.value)} />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">Descrição <Pencil className="h-3 w-3" /></label>
+                  <Input value={tableDescription} onChange={(e) => setTableDescription(e.target.value)} />
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">Periodicidade <Pencil className="h-3 w-3" /></label>
+                  <Select value={periodicity} onValueChange={setPeriodicity}>
+                    <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                    <SelectContent>
+                      {["Diária", "Semanal", "Mensal", "Tempo Real", "Unica"].map(v => (
+                        <SelectItem key={v} value={v}>{v}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">Formato Origem <Pencil className="h-3 w-3" /></label>
+                  <Select value={originFormat} onValueChange={setOriginFormat}>
+                    <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                    <SelectContent>
+                      {["csv", "json", "JSON API", "xml", "parquet", "orc", "Tabela relacional", "N/A"].map(v => (
+                        <SelectItem key={v} value={v}>{v}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">Tipo Ingestão <Pencil className="h-3 w-3" /></label>
+                  <Select value={ingestionType} onValueChange={setIngestionType}>
+                    <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                    <SelectContent>
+                      {["Batch", "Micro-Batch", "Streaming"].map(v => (
+                        <SelectItem key={v} value={v}>{v}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">Horário <Pencil className="h-3 w-3" /></label>
+                  <Input type="time" value={horario} onChange={(e) => setHorario(e.target.value)} />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">Data Criação da Tabela <Pencil className="h-3 w-3" /></label>
+                  <Input type="date" value={dataCriacao} onChange={(e) => setDataCriacao(e.target.value)} />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">Data Início Atualizações <Pencil className="h-3 w-3" /></label>
+                  <Input type="date" value={dataAtualizacao} onChange={(e) => setDataAtualizacao(e.target.value)} />
+                </div>
+              </div>
+            </div>
+
+            {/* Colunas editáveis */}
+            <div className="rounded-lg border border-border p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Colunas</p>
+                <Button variant="outline" size="sm" onClick={addColumn} className="gap-1">
+                  <PlusCircle className="w-4 h-4" /> Adicionar coluna
+                </Button>
+              </div>
+
+              {columns.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">Nenhuma coluna. Clique em "Adicionar coluna".</p>
+              ) : (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-[1fr_120px_1fr_80px_120px_40px] gap-2 text-xs font-medium text-muted-foreground px-1">
+                    <span>Nome</span><span>Tipo</span><span>Descrição</span><span>PII</span><span>Tipo PII</span><span></span>
+                  </div>
+                  {columns.map((col, i) => (
+                    <div key={i} className="grid grid-cols-[1fr_120px_1fr_80px_120px_40px] gap-2 items-center">
+                      <Input value={col.column_name} onChange={(e) => updateColumn(i, "column_name", e.target.value)}
+                        placeholder="nome_coluna" className="text-xs font-mono" />
+                      <Select value={col.data_type} onValueChange={(v) => updateColumn(i, "data_type", v)}>
+                        <SelectTrigger className="text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {DATA_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <Input value={col.column_description} onChange={(e) => updateColumn(i, "column_description", e.target.value)}
+                        placeholder="Descrição" className="text-xs" />
+                      <Select value={col.pii ? "Sim" : "Não"} onValueChange={(v) => {
+                          updateColumn(i, "pii", v === "Sim");
+                          if (v === "Não") updateColumn(i, "pii_type_id", "N/A");
+                        }}>
+                        <SelectTrigger className="text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Sim">Sim</SelectItem>
+                          <SelectItem value="Não">Não</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Select value={col.pii_type_id} onValueChange={(v) => updateColumn(i, "pii_type_id", v)} disabled={!col.pii}>
+                        <SelectTrigger className="text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {piiTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                      <button onClick={() => removeColumn(i)} className="text-destructive hover:text-destructive/80 transition-colors mx-auto">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ))}
+                  
+                  <div className="pt-4 space-y-2 border-t mt-4">
+                    <label className="text-sm font-medium text-foreground">Coluna de partição</label>
+                    <Select value={partitionColumn} onValueChange={setPartitionColumn}>
+                      <SelectTrigger className="max-w-[300px]"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Nenhuma">Nenhuma</SelectItem>
+                        {columns.filter(c => c.column_name).map((c, idx) => (
+                          <SelectItem key={idx} value={c.column_name}>{c.column_name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-4">
+              <Button variant="outline" className="flex-1" onClick={() => setStep(1)}>
+                <ArrowLeft className="w-4 h-4 mr-2" /> Voltar
+              </Button>
+              <Button className="flex-1" size="lg" onClick={() => setStep(3)}>
+                Revisar alterações
+              </Button>
+            </div>
+          </div>
+        );
+
+      // ===== STEP 3: Resumo e enviar =====
+      case 3:
+        return (
+          <div className="space-y-6">
+            <h2 className="text-xl font-bold text-foreground">Resumo das Edições</h2>
+
+            <div className="rounded-lg border border-border p-6 space-y-4">
+              <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Metadados</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1"><label className="text-xs font-medium text-muted-foreground">Tabela</label>
+                  <Input value={tableName} readOnly className="bg-muted font-mono" /></div>
+                <div className="space-y-1"><label className="text-xs font-medium text-muted-foreground">Descrição</label>
+                  <Input value={tableDescription} readOnly className="bg-muted" /></div>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-1"><label className="text-xs font-medium text-muted-foreground">Periodicidade</label>
+                  <Input value={periodicity} readOnly className="bg-muted" /></div>
+                <div className="space-y-1"><label className="text-xs font-medium text-muted-foreground">Formato</label>
+                  <Input value={originFormat} readOnly className="bg-muted" /></div>
+                <div className="space-y-1"><label className="text-xs font-medium text-muted-foreground">Tipo Ingestão</label>
+                  <Input value={ingestionType} readOnly className="bg-muted" /></div>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-1"><label className="text-xs font-medium text-muted-foreground">Horário</label>
+                  <Input value={horario || "N/A"} readOnly className="bg-muted" /></div>
+                <div className="space-y-1"><label className="text-xs font-medium text-muted-foreground">Data Criação</label>
+                  <Input value={dataCriacao ? new Date(dataCriacao).toLocaleDateString("pt-BR", { timeZone: "UTC" }) : "N/A"} readOnly className="bg-muted" /></div>
+                <div className="space-y-1"><label className="text-xs font-medium text-muted-foreground">Data Atualizações</label>
+                  <Input value={dataAtualizacao ? new Date(dataAtualizacao).toLocaleDateString("pt-BR", { timeZone: "UTC" }) : "N/A"} readOnly className="bg-muted" /></div>
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-border p-6 space-y-4">
+              <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Colunas ({columns.length})</p>
+              {columns.length > 0 && (
+                <>
+                  <div className="grid grid-cols-[1fr_100px_1fr_60px_100px_60px] gap-2 text-xs font-medium text-muted-foreground">
+                    <span>Nome</span><span>Tipo</span><span>Descrição</span><span>PII</span><span>Tipo PII</span><span>Partição</span>
+                  </div>
+                  {columns.map((col, i) => {
+                    const isPartition = col.column_name === partitionColumn;
+                    return (
+                      <div key={i} className="grid grid-cols-[1fr_100px_1fr_60px_100px_60px] gap-2">
+                        <Input value={col.column_name} readOnly className="bg-muted text-xs font-mono" />
+                        <Input value={col.data_type} readOnly className="bg-muted text-xs" />
+                        <Input value={col.column_description || "—"} readOnly className="bg-muted text-xs" />
+                        <Input value={col.pii ? "Sim" : "Não"} readOnly className="bg-muted text-xs text-center" />
+                        <Input value={col.pii ? col.pii_type_id : "N/A"} readOnly className="bg-muted text-xs text-center" />
+                        <Input value={isPartition ? "Sim" : "Não"} readOnly className="bg-muted text-xs text-center" />
+                      </div>
+                    );
+                  })}
+                </>
+              )}
+            </div>
+
+            <div className="flex gap-4">
+              <Button variant="outline" className="flex-1" onClick={() => setStep(2)}>
+                <ArrowLeft className="w-4 h-4 mr-2" /> Voltar para edição
+              </Button>
+              <Button className="flex-1 gap-2" size="lg" disabled={isSubmitting} onClick={handleSubmit}>
+                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                Submeter edição
+              </Button>
+            </div>
+          </div>
+        );
+
+      default: return null;
     }
   };
 
@@ -256,7 +542,7 @@ const EditTable = () => {
       <Navbar />
       <div className="container max-w-4xl py-12">
         {renderStep()}
-        <StepIndicator totalSteps={TOTAL_STEPS} currentStep={step} />
+        {step >= 1 && <StepIndicator totalSteps={TOTAL_STEPS} currentStep={step} />}
       </div>
     </div>
   );
