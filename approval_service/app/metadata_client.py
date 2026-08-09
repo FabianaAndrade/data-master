@@ -25,10 +25,6 @@ def _handle_response(response: httpx.Response) -> Any:
     return response.json()
 
 
-# ---------------------------------------------------------------------------
-# Read
-# ---------------------------------------------------------------------------
-
 def get_ingestion_for_approval(ingestion_id: int) -> dict:
     """Busca dados completos de uma ingestão para o fluxo de aprovação."""
     with httpx.Client() as client:
