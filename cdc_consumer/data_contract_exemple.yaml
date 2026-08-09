@@ -1,0 +1,130 @@
+apiVersion: v3.1.0
+kind: DataContract
+id: orders
+name: Orders
+version: 1.0.0
+status: active
+description:
+  purpose: "Provides order and line item data for analytics and reporting"
+  usage: "Used by analytics team for sales analysis and business intelligence"
+  limitations: "Contains only the last 2 years of data"
+schema:
+  - name: orders
+    physicalType: TABLE
+    description: All historic web shop orders since 2020-01-01. Includes successful and cancelled orders.
+    properties:
+      - name: order_id
+        logicalType: string
+        description: The internal order id for every orders. Do not show this to a customer.
+        businessName: Internal Order ID
+        physicalType: UUID
+        examples:
+          - 99e8bb10-3785-4634-9664-8dc79eb69d43
+        primaryKey: true
+        classification: internal
+        required: true
+        unique: true
+      - name: customer_id
+        logicalType: string
+        description: A reference to the customer number
+        businessName: Customer Number
+        physicalType: TEXT
+        examples:
+          - c123456789
+        required: true
+        unique: false
+        logicalTypeOptions:
+          minLength: 10
+          maxLength: 10
+        tags:
+          - pii:true
+        classification: internal
+        criticalDataElement: true
+      - name: order_total
+        logicalType: integer
+        description: The order total amount in cents, including tax, after discounts.
+          Includes shipping costs.
+        physicalType: INTEGER
+        examples:
+          - "9999"
+        quality:
+          - type: text
+            description: The order_total equals the sum of all related line items.
+        required: true
+        businessName: Order Amount
+      - name: order_timestamp
+        logicalType: timestamp
+        description: The time including timezone when the order payment was successfully
+          confirmed.
+        physicalType: TIMESTAMPTZ
+        businessName: Order Date
+        examples:
+          - "2025-03-01 14:30:00+01"
+      - name: order_status
+        businessName: Status
+        description: The business status of the order
+        logicalType: string
+        physicalType: TEXT
+        examples:
+          - shipped
+        quality:
+          - type: library
+            description: Ensure that there are no other status values.
+            metric: invalidValues
+            arguments:
+              validValues:
+                - pending
+                - paid
+                - processing
+                - shipped
+                - delivered
+                - cancelled
+                - refunded
+            mustBe: 0
+    quality:
+      - type: library
+        metric: rowCount
+        mustBeGreaterThan: 100000
+        description: If there are less than 100k rows, something is wrong.
+servers:
+  - server: production
+    environment: prod
+    type: postgres
+    host: aws-1-eu-central-2.pooler.supabase.com
+    port: 6543
+    database: postgres
+    schema: dp_orders_v1
+team:
+  name: sales
+  description: This data product is owned by the "Sales" team
+  members:
+    - username: john@example.com
+      name: John Doe
+      role: Owner
+  authoritativeDefinitions:
+    - type: slack
+      url: https://slack.example.com/teams/sales
+slaProperties:
+  - property: availability
+    value: 99.9%
+    description: Data platform uptime guarantee
+  - property: retention
+    value: "1"
+    unit: year
+    description: Data will be deleted after 1 year
+  - property: freshness
+    value: "24"
+    unit: hours
+#    element: orders.order_timestamp # enable this to check freshness with Data Contract CLI
+    description: Within 24 hours of order placement
+  - property: support
+    value: business hours
+    description: Support only during business hours
+tags:
+  - e-commerce
+  - transactions
+  - pii
+customProperties:
+  - property: dataPlatformRole
+    value: role_orders_v1
+contractCreatedTs: "2025-01-15T10:00:00Z"

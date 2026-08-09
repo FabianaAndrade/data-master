@@ -1,4 +1,5 @@
 from datetime import datetime
+import json
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from .database import get_db_connection
@@ -448,6 +449,107 @@ def get_quality_rules_list():
         if conn:
             conn.close()
 
+
+def _insert_approval_outbox(cur, ingestion_id: int) -> None:
+    """
+    Monta o payload enriquecido (metadados + colunas + PII + DQ) e insere
+    na tabela outbox. Deve ser chamada DENTRO da mesma transação de aprovação.
+    """
+    # 1. Dados da ingestão + metadados da tabela
+    cur.execute("""
+        SELECT
+            i.ingestion_id,
+            i.status,
+            i.active_version,
+            u_approver.full_name  AS approved_by,
+            s.name                AS sigla,
+            itm.table_name,
+            itm.table_description,
+            itm.layer,
+            itm.origin_format,
+            itm.periodicity,
+            itm.ingestion_type,
+            itm.version,
+            itm.created_at        AS table_created_at,
+            o.sys_name            AS origin
+        FROM "ingestions" i
+        LEFT JOIN "ingestions_table_metadata" itm
+               ON i.ingestion_id = itm.ingestion_id AND i.active_version = itm.version
+        LEFT JOIN "siglas" s      ON i.sigla_id = s.sigla_id
+        LEFT JOIN "users" u_approver ON i.last_updated_by = u_approver.user_id
+        LEFT JOIN "origins" o     ON itm.origin = o.sys_id
+        WHERE i.ingestion_id = %s;
+    """, (ingestion_id,))
+    ing = cur.fetchone()
+    if not ing:
+        return
+
+    # 2. Colunas + PII + DQ rules
+    cur.execute("""
+        SELECT
+            icm.column_name,
+            icm.column_description,
+            icm.data_type,
+            icm.partition_column,
+            icm.pii,
+            pt.pii_name   AS pii_type,
+            (
+                SELECT string_agg(qr.rule_name, ', ')
+                FROM "columns_quality_rules" cqr
+                JOIN "quality_rules" qr ON cqr.rule_id = qr.rule_id
+                WHERE cqr.ingestion_id = icm.ingestion_id
+                  AND cqr.version_id   = icm.version
+                  AND cqr.column_name  = icm.column_name
+            ) AS quality_rules
+        FROM "ingestions_columns_metadata" icm
+        LEFT JOIN "pii_types" pt ON icm.pii_id = pt.pii_id
+        WHERE icm.ingestion_id = %s
+          AND icm.version = %s;
+    """, (ingestion_id, ing["active_version"]))
+    columns = cur.fetchall()
+
+    # 3. Montar payload
+    payload = {
+        "ingestion_id": ing["ingestion_id"],
+        "status": ing["status"],
+        "approved_by": ing["approved_by"],
+        "sigla": ing["sigla"],
+        "table_metadata": {
+            "table_name": ing["table_name"],
+            "table_description": ing["table_description"],
+            "origin": ing["origin"],
+            "layer": ing["layer"],
+            "origin_format": ing["origin_format"],
+            "periodicity": ing["periodicity"],
+            "ingestion_type": ing["ingestion_type"],
+            "version": ing["version"],
+            "created_at": ing["table_created_at"].isoformat() if ing["table_created_at"] else None,
+        },
+        "columns": [
+            {
+                "column_name": col["column_name"],
+                "column_description": col["column_description"],
+                "data_type": col["data_type"],
+                "partition_column": col["partition_column"],
+                "pii": col["pii"],
+                "pii_type": col["pii_type"],
+                "quality_rules": [r.strip() for r in col["quality_rules"].split(",")]
+                    if col["quality_rules"] else [],
+            }
+            for col in columns
+        ],
+    }
+
+    # 4. Inserir na outbox (mesma transação)
+    cur.execute(
+        """
+        INSERT INTO "outbox" ("aggregatetype", "aggregateid", "type", "payload")
+        VALUES (%s, %s, %s, %s);
+        """,
+        ("ingestion", str(ingestion_id), "APPROVED", json.dumps(payload))
+    )
+
+
 def approve_ingestion_db(ingestion_id: int, approved_by: int):
     conn = get_db_connection()
     try:
@@ -505,6 +607,13 @@ def approve_ingestion_db(ingestion_id: int, approved_by: int):
                             """,
                             (approved_by, ingestion_id)
                         )
+
+                    # -------------------------------------------------------
+                    # Outbox: montar payload enriquecido e inserir na outbox
+                    # (na mesma transação para garantir atomicidade)
+                    # -------------------------------------------------------
+                    _insert_approval_outbox(cur, ingestion_id)
+
     finally:
         if conn:
             conn.close()

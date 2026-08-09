@@ -1,4 +1,0 @@
-dn: ou=MKTI,ou=siglas,dc=empresa,dc=com
-changetype: modify
-add: member
-member: uid=jsilva,ou=users,dc=empresa,dc=com

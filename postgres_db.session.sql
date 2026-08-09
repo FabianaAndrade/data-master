@@ -152,3 +152,13 @@ VALUES (1, 'N/A'),
 	(7, 'Nome'),
 	(8, 'Data Nascimento'),
 	(9, 'Outros') ON CONFLICT ("pii_id") DO NOTHING;
+
+DROP TABLE IF EXISTS "outbox" CASCADE;
+CREATE TABLE IF NOT EXISTS "outbox" (
+	"id"            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+	"aggregatetype" VARCHAR(255) NOT NULL,
+	"aggregateid"   VARCHAR(255) NOT NULL,
+	"type"          VARCHAR(255) NOT NULL,
+	"payload"       JSONB NOT NULL,
+	"created_at"    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

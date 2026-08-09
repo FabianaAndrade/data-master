@@ -1,0 +1,81 @@
+apiVersion: v3.1.0
+kind: DataContract
+id: teste1
+name: teste1
+version: '1'
+status: APPROVED
+description:
+  purpose: Tabela teste1 otimizada para análise de dados e transações.
+  usage: Tabela teste1 otimizada para análise de dados e transações.
+  limitations: Tabela teste1 otimizada para análise de dados e transações.
+schema:
+- name: teste1
+  physicalType: table
+  description: Tabela teste1 otimizada para análise de dados e transações.
+  properties:
+  - name: cpf
+    description: Descrição gerada via IA para a coluna cpf
+    physicalType: STRING
+    primaryKey: false
+    partitioned: false
+    tags:
+    - pii:CNPJ
+    quality:
+    - id: VALIDA_NULOS
+      type: library
+      metric: rowCount
+      mustBe: '0'
+      description: ''
+    - id: VALIDA_CPF
+      type: library
+      metric: rowCount
+      mustBe: '0'
+      description: ''
+  - name: dat_ref_carga
+    description: Descrição gerada via IA para a coluna dat_ref_carga
+    physicalType: DATE
+    primaryKey: false
+    partitioned: true
+    tags:
+    - 'pii:'
+    quality:
+    - id: VALIDA_NULOS
+      type: library
+      metric: rowCount
+      mustBe: '0'
+      description: ''
+    - id: VALIDA_CPF
+      type: library
+      metric: rowCount
+      mustBe: '0'
+      description: ''
+servers:
+- server: databricks
+  type: azure
+  format: delta
+  location: sc:dd
+team:
+  name: MKTI - Marketing e Tecnologia
+  members:
+  - username: jsilva
+    name: jsilva
+    role: Owner
+slaProperties:
+- property: periodicity
+  value: Diária
+  description: Periodicity of data updates
+- property: ingestion_type
+  value: Micro-Batch
+  description: Type of data ingestion
+customProperties:
+- property: aprovado_por
+  value: jsilva
+- property: ingestion_id
+  value: 107
+- property: sistema_origem
+  value: mysql
+- property: formato_origem
+  value: csv
+- property: medallion_layer
+  value: RAW
+contractCreatedTs: '2026-08-02T15:53:56Z'
