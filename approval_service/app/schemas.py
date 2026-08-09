@@ -5,4 +5,4 @@ from pydantic import BaseModel
 
 
 class RejectBody(BaseModel):
-    motivo: str
+    motivo: str = ""
