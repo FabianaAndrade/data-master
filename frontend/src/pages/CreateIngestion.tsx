@@ -23,7 +23,7 @@ const CreateIngestion = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [sigla, setSigla] = useState({ sigla: "", gestorAprovador: "" });
-  const [fonte, setFonte] = useState({ sistemaOrigem: "", tabela: "", formatoArquivo: "" });
+  const [fonte, setFonte] = useState({ sistemaOrigem: "", formatoArquivo: "" });
   const [metadados, setMetadados] = useState({
     nomeTabela: "", periodicidade: "", tipoIngestao: "",
     horario: "", dataCriacao: "", dataAtualizacao: "", atualizacao: "", incluirColunaDataRef: "",
@@ -68,7 +68,6 @@ const CreateIngestion = () => {
           },
           fonte: {
             sistemaOrigem: fonte.sistemaOrigem,
-            tabela: fonte.tabela,
             formatoArquivo: fonte.formatoArquivo,
           },
           metadados: {
@@ -147,10 +146,10 @@ const CreateIngestion = () => {
     switch (step) {
       case 0: return <StepSigla data={sigla} onChange={setSigla} onNext={next} />;
       case 1: return <StepFonte data={fonte} onChange={setFonte} onNext={next} onBack={prev} />;
-      case 2: return <StepMetadados data={metadados} onChange={setMetadados} onNext={next} onBack={prev} tabelaOrigem={fonte.tabela} />;
-      case 3: return <StepColunas data={colunas} onChange={setColunas} onNext={() => { syncDicionarizacao(); next(); }} onBack={prev} tabelaOrigem={metadados.nomeTabela || fonte.tabela} incluirDataRef={metadados.incluirColunaDataRef === "Sim"} />;
-      case 4: return <StepDicionarizacao data={dicionarizacao} onChange={setDicionarizacao} onNext={() => { syncQualidade(); next(); }} onBack={prev} columnNames={getEffectiveColunas().map((c) => c.nome)} tabelaOrigem={metadados.nomeTabela || fonte.tabela} />;
-      case 5: return <StepQualidade data={qualidade} onChange={setQualidade} onNext={next} onBack={prev} tabelaOrigem={metadados.nomeTabela || fonte.tabela} />;
+      case 2: return <StepMetadados data={metadados} onChange={setMetadados} onNext={next} onBack={prev} />;
+      case 3: return <StepColunas data={colunas} onChange={setColunas} onNext={() => { syncDicionarizacao(); next(); }} onBack={prev} tabelaOrigem={metadados.nomeTabela} incluirDataRef={metadados.incluirColunaDataRef === "Sim"} />;
+      case 4: return <StepDicionarizacao data={dicionarizacao} onChange={setDicionarizacao} onNext={() => { syncQualidade(); next(); }} onBack={prev} columnNames={getEffectiveColunas().map((c) => c.nome)} tabelaOrigem={metadados.nomeTabela} />;
+      case 5: return <StepQualidade data={qualidade} onChange={setQualidade} onNext={next} onBack={prev} tabelaOrigem={metadados.nomeTabela} />;
       case 6: return <StepRevisao formData={{ sigla, fonte, metadados, colunas: { ...colunas, colunas: getEffectiveColunas() }, dicionarizacao, qualidade }} onSubmit={handleSubmit} onBack={prev} />;
       default: return null;
     }

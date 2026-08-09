@@ -108,14 +108,14 @@ def submit_ingestion_db(username: str, body: FullIngestionRequest) -> int:
             sigla_id = get_or_create_sigla(conn, body.sigla.sigla, body.sigla.gestorAprovador)
             
             with conn.cursor() as cur:
-                cur.execute('SELECT "sys_id" FROM "origins" WHERE "sys_name" = %s AND "sys_table_name" = %s;', (body.fonte.sistemaOrigem, body.fonte.tabela))
+                cur.execute('SELECT "sys_id" FROM "origins" WHERE "sys_name" = %s AND "sys_table_name" = %s;', (body.fonte.sistemaOrigem, body.metadados.nomeTabela))
                 origin_row = cur.fetchone()
                 if origin_row:
                     origin_id = origin_row[0]
                 else:
                     cur.execute(
                         'INSERT INTO "origins" ("sys_name", "sys_table_name") VALUES (%s, %s) RETURNING "sys_id";',
-                        (body.fonte.sistemaOrigem, body.fonte.tabela)
+                        (body.fonte.sistemaOrigem, body.metadados.nomeTabela)
                     )
                     origin_id = cur.fetchone()[0]
                 
@@ -147,7 +147,7 @@ def submit_ingestion_db(username: str, body: FullIngestionRequest) -> int:
                     (
                         ingestion_id, 
                         data_criacao,
-                        body.metadados.nomeTabela or body.fonte.tabela, 
+                        body.metadados.nomeTabela, 
                         body.dicionarizacao.descricaoTabela, 
                         origin_id,
                         body.fonte.formatoArquivo,

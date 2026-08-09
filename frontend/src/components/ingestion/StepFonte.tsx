@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "../../hooks/use-auth";
 
 interface StepFonteProps {
-  data: { sistemaOrigem: string; tabela: string; formatoArquivo: string };
+  data: { sistemaOrigem: string; formatoArquivo: string };
   onChange: (data: StepFonteProps["data"]) => void;
   onNext: () => void;
   onBack?: () => void;
@@ -21,10 +21,8 @@ const INGESTION_SERVICE_URL = (import.meta as any).env.VITE_INGESTION_SERVICE_UR
 const StepFonte = ({ data, onChange, onNext, onBack }: StepFonteProps) => {
   const { user } = useAuth();
   const [fontes, setFontes] = useState<Option[]>([]);
-  const [tabelas, setTabelas] = useState<Option[]>([]);
   const [formatos, setFormatos] = useState<Option[]>([]);
   const [isLoadingFontes, setIsLoadingFontes] = useState(false);
-  const [isLoadingTabelas, setIsLoadingTabelas] = useState(false);
   const [isLoadingFormatos, setIsLoadingFormatos] = useState(false);
 
   // Fetch Fontes on mount
@@ -49,30 +47,6 @@ const StepFonte = ({ data, onChange, onNext, onBack }: StepFonteProps) => {
     fetchFontes();
   }, [user]);
 
-  // Fetch Tabelas when sistemaOrigem changes
-  useEffect(() => {
-    async function fetchTabelas() {
-      if (!user?.token || !data.sistemaOrigem) {
-        setTabelas([]);
-        return;
-      }
-      setIsLoadingTabelas(true);
-      try {
-        const response = await fetch(`${INGESTION_SERVICE_URL}/ingestion/tabelas/${data.sistemaOrigem}`, {
-          headers: { Authorization: `Bearer ${user.token}` },
-        });
-        if (response.ok) {
-          const resData = await response.json();
-          setTabelas(resData.tabelas || []);
-        }
-      } catch (error) {
-        console.error("Error fetching tabelas:", error);
-      } finally {
-        setIsLoadingTabelas(false);
-      }
-    }
-    fetchTabelas();
-  }, [user, data.sistemaOrigem]);
 
   // Fetch Formatos when sistemaOrigem changes
   useEffect(() => {
@@ -111,7 +85,7 @@ const StepFonte = ({ data, onChange, onNext, onBack }: StepFonteProps) => {
           <label className="text-sm font-medium text-foreground">Sistema Origem</label>
           <Select
             value={data.sistemaOrigem}
-            onValueChange={(v) => onChange({ ...data, sistemaOrigem: v, tabela: "" })}
+            onValueChange={(v) => onChange({ ...data, sistemaOrigem: v })}
           >
             <SelectTrigger disabled={isLoadingFontes}>
               <SelectValue placeholder={isLoadingFontes ? "Carregando..." : "Selecione o sistema"} />
@@ -124,23 +98,7 @@ const StepFonte = ({ data, onChange, onNext, onBack }: StepFonteProps) => {
           </Select>
         </div>
 
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-foreground">Tabela</label>
-          <Select
-            value={data.tabela}
-            onValueChange={(v) => onChange({ ...data, tabela: v })}
-            disabled={!data.sistemaOrigem || isLoadingTabelas}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder={isLoadingTabelas ? "Carregando..." : (!data.sistemaOrigem ? "Selecione a origem primeiro" : "Selecione a tabela")} />
-            </SelectTrigger>
-            <SelectContent>
-              {tabelas.map((tabela) => (
-                <SelectItem key={tabela.value} value={tabela.value}>{tabela.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+
 
         <div className="space-y-2">
           <label className="text-sm font-medium text-foreground">Formato arquivo origem</label>
@@ -165,7 +123,7 @@ const StepFonte = ({ data, onChange, onNext, onBack }: StepFonteProps) => {
 
       <div className="flex gap-4 pt-4">
         {onBack && <Button variant="outline" className="w-1/3 border-primary/50 hover:bg-primary/10" onClick={onBack}>Voltar</Button>}
-        <Button className="flex-1" size="lg" onClick={onNext} disabled={!data.sistemaOrigem || !data.tabela}>Continue</Button>
+        <Button className="flex-1" size="lg" onClick={onNext} disabled={!data.sistemaOrigem}>Continue</Button>
       </div>
     </div>
   );

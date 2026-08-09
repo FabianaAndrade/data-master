@@ -23,7 +23,6 @@ class SiglaData(BaseModel):
 
 class FonteData(BaseModel):
     sistemaOrigem: str
-    tabela: str
     formatoArquivo: str
 
 class MetadadosData(BaseModel):

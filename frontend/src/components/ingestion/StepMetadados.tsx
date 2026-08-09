@@ -15,7 +15,7 @@ interface StepMetadadosProps {
     atualizacao: string;
     incluirColunaDataRef: string;
   };
-  tabelaOrigem?: string;
+
   onChange: (data: StepMetadadosProps["data"]) => void;
   onNext: () => void;
   onBack?: () => void;
@@ -26,7 +26,7 @@ const INGESTION_SERVICE_URL = (import.meta as any).env.VITE_INGESTION_SERVICE_UR
 /** Retorna a data de hoje no formato YYYY-MM-DD (compatível com input[type=date]) */
 const todayISO = () => new Date().toISOString().split("T")[0];
 
-const StepMetadados = ({ data, tabelaOrigem, onChange, onNext, onBack }: StepMetadadosProps) => {
+const StepMetadados = ({ data, onChange, onNext, onBack }: StepMetadadosProps) => {
   const { user } = useAuth();
   const [opcoes, setOpcoes] = useState({
     periodicidade: [] as string[],
@@ -50,7 +50,7 @@ const StepMetadados = ({ data, tabelaOrigem, onChange, onNext, onBack }: StepMet
 
   useEffect(() => {
     async function fetchMetadados() {
-      const targetTabela = tabelaOrigem || data.nomeTabela || "default";
+      const targetTabela = data.nomeTabela || "default";
       if (!user?.token) return;
 
       setIsLoading(true);
@@ -74,7 +74,7 @@ const StepMetadados = ({ data, tabelaOrigem, onChange, onNext, onBack }: StepMet
     }
 
     fetchMetadados();
-  }, [tabelaOrigem, user]);
+  }, [user]);
 
   return (
     <div className="space-y-6">

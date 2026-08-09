@@ -35,16 +35,12 @@ const StepRevisao = ({ formData, onSubmit, onBack }: StepRevisaoProps) => {
             <div className="text-sm p-2.5 bg-muted rounded-md border min-h-[40px] flex items-center">{fonte.sistemaOrigem || "-"}</div>
           </div>
           <div className="space-y-1">
-            <label className="text-xs font-medium text-muted-foreground">Tabela Origem</label>
-            <div className="text-sm p-2.5 bg-muted rounded-md border min-h-[40px] flex items-center">{fonte.tabela || "-"}</div>
+            <label className="text-xs font-medium text-muted-foreground">Formato Origem</label>
+            <div className="text-sm p-2.5 bg-muted rounded-md border min-h-[40px] flex items-center">{fonte.formatoArquivo || "-"}</div>
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-muted-foreground">Formato Origem</label>
-            <div className="text-sm p-2.5 bg-muted rounded-md border min-h-[40px] flex items-center">{fonte.formatoArquivo || "-"}</div>
-          </div>
           <div className="space-y-1">
             <label className="text-xs font-medium text-muted-foreground">Periodicidade</label>
             <div className="text-sm p-2.5 bg-muted rounded-md border min-h-[40px] flex items-center">{metadados.periodicidade || "-"}</div>
