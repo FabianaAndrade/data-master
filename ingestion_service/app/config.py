@@ -1,3 +1,6 @@
+"""
+Configurações do ingestion_service.
+"""
 import os
 
 JWT_SECRET = "secret_key"

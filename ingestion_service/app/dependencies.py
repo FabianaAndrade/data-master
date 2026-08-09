@@ -1,13 +1,22 @@
-from fastapi import HTTPException, Depends
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+"""
+Dependencies do FastAPI para o ingestion_service.
+"""
 import jwt
-from config import JWT_SECRET, JWT_ALGORITHM
+from fastapi import Depends, HTTPException
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+
+from .config import JWT_SECRET, JWT_ALGORITHM
 
 security = HTTPBearer()
+
 
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ) -> str:
+    """
+    Decodifica o Bearer token e retorna o username (sub).
+    Utilizado como Depends() nos endpoints protegidos.
+    """
     token = credentials.credentials
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
