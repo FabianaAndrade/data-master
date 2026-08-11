@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from app.api import router as api_router
+from app.routes import router
 from app.database import startup_db_seed
 
 app = FastAPI(
@@ -8,7 +8,7 @@ app = FastAPI(
     version="1.0.0"
 )
 
-app.include_router(api_router, tags=["ingestions"])
+app.include_router(router, tags=["ingestions"])
 
 @app.get("/")
 def read_root():
