@@ -5,15 +5,17 @@ import logging
 import time
 import requests
 
+from ..config import Config
+
 logger = logging.getLogger(__name__)
 
 
 class GithubPushRepos:
     BASE_URL = "https://api.github.com"
 
-    def __init__(self, org: str = "satus-org"):
-        self.org = org
-        self.token = "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"
+    def __init__(self, org: str = None, token: str = None):
+        self.org = org or Config.GITHUB_ORG
+        self.token = token or Config.GITHUB_TOKEN
 
     def _headers(self) -> dict:
         return {

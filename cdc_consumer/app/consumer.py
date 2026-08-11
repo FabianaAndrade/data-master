@@ -1,64 +1,35 @@
 """
-CDC Consumer — Consome eventos enriquecidos do tópico Kafka
-publicados via Outbox Pattern + Debezium EventRouter.
-
-Quando uma ingestão é aprovada, o metadata_service insere um payload
-completo na tabela outbox (na mesma transação). O Debezium captura
-essa inserção e o EventRouter SMT roteia para o tópico `ingestion.events`.
-
-Este consumer recebe o payload já enriquecido com:
-- Metadados da tabela
-- Metadados das colunas (tipos, descrições)
-- Informações de PII
-- Regras de Data Quality
-
-Não há consulta direta ao banco de dados.
+CDC Consumer — Lógica de consumo Kafka
 """
 
-from Transform_data_contract import DataContractGenerator
-from Github_push_repos import GithubPushRepos
 import json
-import os
 import time
 import logging
 
 from kafka import KafkaConsumer
 from kafka.errors import NoBrokersAvailable
 
-# ---------------------------------------------------------------------------
-# Config
-# ---------------------------------------------------------------------------
+from .config import Config
+from .services.transformer import DataContractGenerator
+from .services.github import GithubPushRepos
 
-KAFKA_BOOTSTRAP = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "kafka:29092")
-TOPIC = os.getenv("CDC_TOPIC", "ingestion.events")
-GROUP_ID = os.getenv("CONSUMER_GROUP_ID", "cdc-approved-ingestions")
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
 logger = logging.getLogger("cdc_consumer")
 
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
 
 def connect_kafka(retries: int = 30, delay: int = 5) -> KafkaConsumer:
     """Tenta conectar ao Kafka com retries."""
     for attempt in range(1, retries + 1):
         try:
             consumer = KafkaConsumer(
-                TOPIC,
-                bootstrap_servers=KAFKA_BOOTSTRAP,
-                group_id=GROUP_ID,
+                Config.CDC_TOPIC,
+                bootstrap_servers=Config.KAFKA_BOOTSTRAP_SERVERS,
+                group_id=Config.CONSUMER_GROUP_ID,
                 auto_offset_reset="earliest",
                 enable_auto_commit=True,
                 value_deserializer=lambda m: json.loads(m.decode("utf-8")) if m else None,
                 key_deserializer=lambda m: json.loads(m.decode("utf-8")) if m else None,
             )
-            logger.info("✅ Conectado ao Kafka em %s", KAFKA_BOOTSTRAP)
+            logger.info("✅ Conectado ao Kafka em %s", Config.KAFKA_BOOTSTRAP_SERVERS)
             return consumer
         except NoBrokersAvailable:
             logger.warning(
@@ -80,28 +51,29 @@ def process_approved_ingestion(payload: dict) -> None:
     contract_yaml = generator.write_yaml()
     logger.info("Data Contract gerado com sucesso:\n%s", contract_yaml)
 
-    table_name = payload["table_metadata"]["table_name"]
+    table_name = payload.get("table_metadata", {}).get("table_name", "unknown")
 
     # Cria o repo no GitHub já com o arquivo YAML do data contract
     github = GithubPushRepos()
-    result = github.create_repo_with_contract(table_name, contract_yaml.decode("utf-8") if isinstance(contract_yaml, bytes) else contract_yaml)
+    
+    # Handle the fact that contract_yaml might be bytes (if yaml.dump returns bytes) or str
+    if isinstance(contract_yaml, bytes):
+        contract_yaml = contract_yaml.decode("utf-8")
+        
+    result = github.create_repo_with_contract(table_name, contract_yaml)
     logger.info("GitHub result: %s", result)
 
 
-
-# ---------------------------------------------------------------------------
-# Main loop
-# ---------------------------------------------------------------------------
-
-def main():
+def start_consumer():
+    """Inicia o loop principal de consumo do Kafka."""
     logger.info("🚀 CDC Consumer iniciando (Outbox Pattern)...")
-    logger.info("   Tópico : %s", TOPIC)
-    logger.info("   Broker : %s", KAFKA_BOOTSTRAP)
-    logger.info("   Group  : %s", GROUP_ID)
+    logger.info("   Tópico : %s", Config.CDC_TOPIC)
+    logger.info("   Broker : %s", Config.KAFKA_BOOTSTRAP_SERVERS)
+    logger.info("   Group  : %s", Config.CONSUMER_GROUP_ID)
 
     consumer = connect_kafka()
 
-    logger.info("👂 Escutando eventos no tópico '%s'...", TOPIC)
+    logger.info("👂 Escutando eventos no tópico '%s'...", Config.CDC_TOPIC)
 
     try:
         for message in consumer:
@@ -116,7 +88,6 @@ def main():
                 continue
 
             # O Debezium EventRouter pode entregar o payload como string JSON.
-            # Nesse caso, precisamos fazer o parse manual.
             if isinstance(payload, str):
                 logger.info("Payload recebido como string, fazendo parse JSON...")
                 try:
@@ -140,7 +111,6 @@ def main():
                     payload = inner
 
             # O EventRouter já filtra: só eventos da tabela outbox chegam aqui.
-            # O payload é o JSON completo inserido na outbox.
             logger.info(
                 "📬 Evento recebido: ingestion_id=%s",
                 payload.get("ingestion_id", "?") if isinstance(payload, dict) else "?",
@@ -157,7 +127,3 @@ def main():
     finally:
         consumer.close()
         logger.info("🔌 Consumer desconectado do Kafka.")
-
-
-if __name__ == "__main__":
-    main()
