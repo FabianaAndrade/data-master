@@ -88,6 +88,14 @@ class DataContractGenerator:
     def table_description(self) -> str:
         return self._metadata.get("table_description", "")
 
+    @property
+    def table_usage(self) -> str:
+        return self._metadata.get("usage", "")
+    
+    @property
+    def table_limitations(self) -> str:
+        return self._metadata.get("limitations", "")
+
     def _build_header(self) -> dict[str, Any]:
         """Seção de cabeçalho: apiVersion, kind, id, name, version, status."""
         return {
@@ -101,11 +109,10 @@ class DataContractGenerator:
 
     def _build_description(self) -> dict[str, str]:
         """Seção description (purpose / usage / limitations)."""
-        desc = self.table_description
         return {
-            "purpose": desc,
-            "usage": desc,
-            "limitations": desc,
+            "purpose": self.table_description,
+            "usage": self.table_usage,
+            "limitations": self.table_limitations,
         }
 
     def _build_columns(self) -> list[dict[str, Any]]:

@@ -144,6 +144,8 @@ class GithubPushRepos:
         Returns:
             Dict com os resultados de cada etapa.
         """
+        team_slug = team_slug.split('-')[0].strip().lower()
+
         # 1. Cria o repositório a partir do template (herda a action de validação)
         repo_result = self.create_from_template(table_name)
         if "error" in repo_result:
@@ -178,8 +180,18 @@ class GithubPushRepos:
             "team": team_result,
         }
 
+    def list_teams_from_organization(self) -> list:
+        """Lista os times da organização."""
+        url = f"{self.BASE_URL}/orgs/{self.org}/teams"
+        response = requests.get(url, headers=self._headers())
+        if response.status_code >= 400:
+            logger.error("GitHub API error: %s", response.text)
+            return {"error": response.status_code, "message": response.text}
+        return response.json()
+
     def associate_team_repos(self, team_slug: str, owner: str, repo: str) -> dict:
         """Associa um repositório a um time da organização."""
+        print(team_slug)
         url = f"{self.BASE_URL}/orgs/{self.org}/teams/{team_slug}/repos/{owner}/{repo}"
         payload = {
             "permission": "pull",

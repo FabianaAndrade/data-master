@@ -29,6 +29,10 @@ def _insert_approval_outbox(cur, ingestion_id: int) -> None:
             itm.ingestion_type,
             itm.version,
             itm.created_at        AS table_created_at,
+            itm.usage,
+            itm.limitations,
+            itm.security_classification,
+            itm.retention_months,
             o.sys_name            AS origin
         FROM "ingestions" i
         LEFT JOIN "ingestions_table_metadata" itm
@@ -82,6 +86,10 @@ def _insert_approval_outbox(cur, ingestion_id: int) -> None:
             "ingestion_type": ing["ingestion_type"],
             "version": ing["version"],
             "created_at": ing["table_created_at"].isoformat() if ing["table_created_at"] else None,
+            "usage": ing["usage"],
+            "limitations": ing["limitations"],
+            "security_classification": ing["security_classification"],
+            "retention_months": ing["retention_months"],
         },
         "columns": [
             {

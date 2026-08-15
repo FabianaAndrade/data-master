@@ -14,6 +14,11 @@ interface StepMetadadosProps {
     dataAtualizacao: string;
     atualizacao: string;
     incluirColunaDataRef: string;
+    camada: string;
+    usage: string;
+    limitacoes: string;
+    classificacaoSeguranca: string;
+    retencao: string;
   };
 
   onChange: (data: StepMetadadosProps["data"]) => void;
@@ -94,6 +99,18 @@ const StepMetadados = ({ data, onChange, onNext, onBack }: StepMetadadosProps) =
         </div>
 
         <div className="space-y-2">
+          <label className="text-sm font-medium text-foreground">Camada</label>
+          <Select value={data.camada} onValueChange={(v) => onChange({ ...data, camada: v })}>
+            <SelectTrigger disabled={isLoading}><SelectValue placeholder="Selecione" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="bronze">bronze</SelectItem>
+              <SelectItem value="silver">silver</SelectItem>
+              <SelectItem value="gold">gold</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
           <label className="text-sm font-medium text-foreground">Periodicidade</label>
           <Select value={data.periodicidade} onValueChange={(v) => onChange({ ...data, periodicidade: v })}>
             <SelectTrigger disabled={isLoading}><SelectValue placeholder="Selecione" /></SelectTrigger>
@@ -160,6 +177,53 @@ const StepMetadados = ({ data, onChange, onNext, onBack }: StepMetadadosProps) =
             <SelectTrigger disabled={isLoading}><SelectValue placeholder="Selecione" /></SelectTrigger>
             <SelectContent>
               {opcoes.incluirColunaDataRef.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-foreground">Uso (Usage)</label>
+          <textarea
+            placeholder="Descreva o uso previsto para esses dados"
+            value={data.usage || ""}
+            onChange={(e) => onChange({ ...data, usage: e.target.value })}
+            className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-foreground">Limitações</label>
+          <textarea
+            placeholder="Descreva as limitações conhecidas dos dados"
+            value={data.limitacoes || ""}
+            onChange={(e) => onChange({ ...data, limitacoes: e.target.value })}
+            className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-foreground">Classificação de Segurança</label>
+          <Select value={data.classificacaoSeguranca || "Internal"} onValueChange={(v) => onChange({ ...data, classificacaoSeguranca: v })}>
+            <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Internal">Internal</SelectItem>
+              <SelectItem value="Confidencial">Confidencial</SelectItem>
+              <SelectItem value="Restrito">Restrito</SelectItem>
+              <SelectItem value="Secreto">Secreto</SelectItem>
+              <SelectItem value="Público">Público</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-foreground">Retenção</label>
+          <Select value={data.retencao || "Não se aplica"} onValueChange={(v) => onChange({ ...data, retencao: v })}>
+            <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Não se aplica">Não se aplica</SelectItem>
+              {Array.from({ length: 120 }, (_, i) => i + 1).map(m => (
+                <SelectItem key={m} value={String(m)}>{m} {m === 1 ? 'mês' : 'meses'}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>

@@ -102,9 +102,10 @@ def submit_ingestion_db(username: str, body: FullIngestionRequest) -> int:
                     INSERT INTO "ingestions_table_metadata" (
                         "ingestion_id", "version", "created_at", "is_active", 
                         "table_name", "table_description", "origin", "layer", 
-                        "origin_format", "periodicity", "ingestion_type", "inicial_date_update"
+                        "origin_format", "periodicity", "ingestion_type", "inicial_date_update",
+                        "usage", "limitations", "security_classification", "retention_months"
                     )
-                    VALUES (%s, 1, %s, TRUE, %s, %s, %s, 'RAW', %s, %s, %s, %s);
+                    VALUES (%s, 1, %s, TRUE, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
                     """,
                     (
                         ingestion_id, 
@@ -112,10 +113,15 @@ def submit_ingestion_db(username: str, body: FullIngestionRequest) -> int:
                         body.metadados.nomeTabela, 
                         body.dicionarizacao.descricaoTabela, 
                         origin_id,
+                        body.metadados.camada or 'RAW',
                         body.fonte.formatoArquivo,
                         body.metadados.periodicidade,
                         body.metadados.tipoIngestao,
-                        data_atualizacao
+                        data_atualizacao,
+                        body.metadados.usage or None,
+                        body.metadados.limitacoes or None,
+                        body.metadados.classificacaoSeguranca or 'Internal',
+                        body.metadados.retencao or 'Não se aplica'
                     )
                 )
                 
@@ -293,7 +299,11 @@ def get_ingestion_detail_db(ingestion_id: int):
                     i.status,
                     u.full_name as aprovador,
                     itm.layer as camada,
-                    o.sys_name as sistema_origem
+                    o.sys_name as sistema_origem,
+                    itm.usage as usage,
+                    itm.limitations as limitacoes,
+                    itm.security_classification as classificacao_seguranca,
+                    itm.retention_months as retencao
                 FROM "ingestions" i
                 LEFT JOIN "ingestions_table_metadata" itm 
                     ON i.ingestion_id = itm.ingestion_id AND i.active_version = itm.version
@@ -438,16 +448,21 @@ def create_new_version_for_ingestion(conn, ingestion_id: int, request) -> dict:
             INSERT INTO "ingestions_table_metadata" (
                 "ingestion_id", "version", "created_at", "is_active",
                 "table_name", "table_description", "origin", "layer",
-                "origin_format", "periodicity", "ingestion_type", "inicial_date_update"
+                "origin_format", "periodicity", "ingestion_type", "inicial_date_update",
+                "usage", "limitations", "security_classification", "retention_months"
             )
-            VALUES (%s, %s, COALESCE(%s, CURRENT_DATE), FALSE, %s, %s, %s, %s, %s, %s, %s, %s);
+            VALUES (%s, %s, COALESCE(%s, CURRENT_DATE), FALSE, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
             """,
             (
                 ingestion_id, new_version, data_criacao,
                 tm.table_name, tm.table_description,
                 tm.origin_id, tm.layer,
                 tm.origin_format, tm.periodicity,
-                tm.ingestion_type, inicio_atualizacao
+                tm.ingestion_type, inicio_atualizacao,
+                tm.usage or None,
+                tm.limitations or None,
+                tm.security_classification or 'Internal',
+                tm.retention_months or 'Não se aplica'
             )
         )
 

@@ -44,6 +44,9 @@ interface IngestionDetailData {
   aprovador: string;
   camada: string;
   sistema_origem: string;
+  usage: string;
+  limitacoes: string;
+  classificacao_seguranca: string;
   colunas: ColumnDetail[];
 }
 
@@ -297,6 +300,22 @@ const ApproveIngestion = () => {
                     <div className="space-y-1">
                       <label className="text-xs font-semibold text-muted-foreground">Camada</label>
                       <Input value={detail.camada || "RAW"} readOnly className="bg-muted font-mono" />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-muted-foreground">Classificação de Segurança</label>
+                    <Input value={detail.classificacao_seguranca || "Internal"} readOnly className="bg-muted font-semibold" />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-muted-foreground">Uso (Usage)</label>
+                      <div className="text-sm p-3 bg-muted rounded-md border min-h-[60px] break-words whitespace-pre-wrap">{detail.usage || "Não informado"}</div>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-muted-foreground">Limitações</label>
+                      <div className="text-sm p-3 bg-muted rounded-md border min-h-[60px] break-words whitespace-pre-wrap">{detail.limitacoes || "Não informado"}</div>
                     </div>
                   </div>
 

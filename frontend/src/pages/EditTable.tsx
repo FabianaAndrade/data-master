@@ -24,6 +24,7 @@ interface IngestionDetailData {
   inicio_ingestao: string; data_criacao: string; descricao: string;
   periodicidade: string; formato_origem: string; tipo_atualizacao: string;
   status: string; aprovador: string; camada: string; sistema_origem: string;
+  usage: string; limitacoes: string; classificacao_seguranca: string;
   colunas: ColumnDetail[];
 }
 
@@ -58,6 +59,9 @@ const EditTable = () => {
   const [horario, setHorario] = useState("");
   const [columns, setColumns] = useState<EditableColumn[]>([]);
   const [partitionColumn, setPartitionColumn] = useState("Nenhuma");
+  const [usage, setUsage] = useState("");
+  const [limitations, setLimitations] = useState("");
+  const [securityClassification, setSecurityClassification] = useState("Internal");
 
   const piiTypes = ["N/A", "CPF", "CNPJ", "Email", "Nome", "RG", "Telefone", "Endereço"];
 
@@ -107,6 +111,9 @@ const EditTable = () => {
         })));
         const partitionCol = data.colunas?.find(c => c.particao === "Sim");
         setPartitionColumn(partitionCol ? partitionCol.nome : "Nenhuma");
+        setUsage(data.usage || "");
+        setLimitations(data.limitacoes || "");
+        setSecurityClassification(data.classificacao_seguranca || "Internal");
       } else { toast.error("Erro ao carregar detalhes."); setStep(0); }
     } catch { toast.error("Erro ao carregar detalhes."); setStep(0); }
     finally { setIsLoadingDetail(false); }
@@ -145,6 +152,9 @@ const EditTable = () => {
         data_criacao: dataCriacao,
         horario: horario,
         tipo_atualizacao: ingestionType,
+        usage: usage,
+        limitations: limitations,
+        security_classification: securityClassification,
       },
       columns: columns.map(c => ({
         ...c,
@@ -386,6 +396,31 @@ const EditTable = () => {
                   <Input type="date" value={dataAtualizacao} onChange={(e) => setDataAtualizacao(e.target.value)} />
                 </div>
               </div>
+              <div className="space-y-2">
+                <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">Classificação de Segurança <Pencil className="h-3 w-3" /></label>
+                <Select value={securityClassification} onValueChange={setSecurityClassification}>
+                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectContent>
+                    {["Internal", "Confidencial", "Restrito", "Secreto", "Público"].map(v => (
+                      <SelectItem key={v} value={v}>{v}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">Uso (Usage) <Pencil className="h-3 w-3" /></label>
+                  <textarea value={usage} onChange={(e) => setUsage(e.target.value)}
+                    placeholder="Descreva o uso previsto para esses dados"
+                    className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">Limitações <Pencil className="h-3 w-3" /></label>
+                  <textarea value={limitations} onChange={(e) => setLimitations(e.target.value)}
+                    placeholder="Descreva as limitações conhecidas"
+                    className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" />
+                </div>
+              </div>
             </div>
 
             {/* Colunas editáveis */}
@@ -494,6 +529,14 @@ const EditTable = () => {
                   <Input value={dataCriacao ? new Date(dataCriacao).toLocaleDateString("pt-BR", { timeZone: "UTC" }) : "N/A"} readOnly className="bg-muted" /></div>
                 <div className="space-y-1"><label className="text-xs font-medium text-muted-foreground">Data Atualizações</label>
                   <Input value={dataAtualizacao ? new Date(dataAtualizacao).toLocaleDateString("pt-BR", { timeZone: "UTC" }) : "N/A"} readOnly className="bg-muted" /></div>
+              </div>
+              <div className="space-y-1"><label className="text-xs font-medium text-muted-foreground">Classificação de Segurança</label>
+                <Input value={securityClassification || "Internal"} readOnly className="bg-muted font-semibold" /></div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1"><label className="text-xs font-medium text-muted-foreground">Uso (Usage)</label>
+                  <div className="text-sm p-3 bg-muted rounded-md border min-h-[60px] break-words whitespace-pre-wrap">{usage || "Não informado"}</div></div>
+                <div className="space-y-1"><label className="text-xs font-medium text-muted-foreground">Limitações</label>
+                  <div className="text-sm p-3 bg-muted rounded-md border min-h-[60px] break-words whitespace-pre-wrap">{limitations || "Não informado"}</div></div>
               </div>
             </div>
 

@@ -52,6 +52,7 @@ def process_approved_ingestion(payload: dict) -> None:
     logger.info("Data Contract gerado com sucesso:\n%s", contract_yaml)
 
     table_name = payload.get("table_metadata", {}).get("table_name", "unknown")
+    team_name = payload.get("sigla", "")
 
     # Cria o repo no GitHub já com o arquivo YAML do data contract
     github = GithubPushRepos()
@@ -60,7 +61,7 @@ def process_approved_ingestion(payload: dict) -> None:
     if isinstance(contract_yaml, bytes):
         contract_yaml = contract_yaml.decode("utf-8")
         
-    result = github.create_repo_with_contract(table_name, contract_yaml)
+    result = github.create_repo_with_contract(table_name, contract_yaml, team_name)
     logger.info("GitHub result: %s", result)
 
 

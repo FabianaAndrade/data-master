@@ -48,6 +48,11 @@ class MetadadosData(BaseModel):
     dataAtualizacao: str = ""
     atualizacao: str = ""
     incluirColunaDataRef: str = ""
+    camada: str = ""
+    usage: str = ""
+    limitacoes: str = ""
+    classificacaoSeguranca: str = "Internal"
+    retencao: str = "Não se aplica"
 
 
 class ColunasData(BaseModel):
@@ -111,6 +116,10 @@ class TableMetadata(BaseModel):
     tipo_atualizacao: str
     data_criacao: Optional[str] = None
     horario: Optional[str] = None
+    usage: Optional[str] = None
+    limitations: Optional[str] = None
+    security_classification: Optional[str] = "Internal"
+    retention_months: Optional[str] = "Não se aplica"
 
 
 class IngestionRequestUpdate(BaseModel):

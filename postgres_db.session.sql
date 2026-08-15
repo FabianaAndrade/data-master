@@ -64,6 +64,10 @@ CREATE TABLE IF NOT EXISTS "ingestions_table_metadata" (
 	"periodicity" VARCHAR(255),
 	"ingestion_type" VARCHAR(255),
 	"inicial_date_update" DATE,
+	"usage" TEXT,
+	"limitations" TEXT,
+	"security_classification" VARCHAR(50) DEFAULT 'Internal',
+	"retention_months" VARCHAR(50) DEFAULT 'Não se aplica',
 	PRIMARY KEY ("ingestion_id", "version"),
 	CONSTRAINT fk_table_metadata_ingestion FOREIGN KEY("ingestion_id") REFERENCES "ingestions"("ingestion_id") ON UPDATE NO ACTION ON DELETE CASCADE,
 	CONSTRAINT fk_table_metadata_origin FOREIGN KEY("origin") REFERENCES "origins"("sys_id") ON UPDATE NO ACTION ON DELETE

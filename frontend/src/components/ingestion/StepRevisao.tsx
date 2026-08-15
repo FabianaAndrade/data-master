@@ -74,6 +74,22 @@ const StepRevisao = ({ formData, onSubmit, onBack }: StepRevisaoProps) => {
           <div className="text-sm p-3 bg-muted rounded-md border min-h-[60px] break-words whitespace-pre-wrap">{dicionarizacao.descricaoTabela || "Nenhuma descrição"}</div>
         </div>
 
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Uso (Usage)</label>
+            <div className="text-sm p-3 bg-muted rounded-md border min-h-[60px] break-words whitespace-pre-wrap">{metadados.usage || "Não informado"}</div>
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Limitações</label>
+            <div className="text-sm p-3 bg-muted rounded-md border min-h-[60px] break-words whitespace-pre-wrap">{metadados.limitacoes || "Não informado"}</div>
+          </div>
+        </div>
+
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-muted-foreground">Classificação de Segurança</label>
+          <div className="text-sm p-2.5 bg-muted rounded-md border min-h-[40px] flex items-center">{metadados.classificacaoSeguranca || "Internal"}</div>
+        </div>
+
         {colunas.colunas.length > 0 && (
           <div className="space-y-3 pt-4 border-t">
             <h3 className="text-sm font-semibold text-foreground">Definição das Colunas</h3>

@@ -26,7 +26,9 @@ const CreateIngestion = () => {
   const [fonte, setFonte] = useState({ sistemaOrigem: "", formatoArquivo: "" });
   const [metadados, setMetadados] = useState({
     nomeTabela: "", periodicidade: "", tipoIngestao: "",
-    horario: "", dataCriacao: "", dataAtualizacao: "", atualizacao: "", incluirColunaDataRef: "",
+    horario: "", dataCriacao: "", dataAtualizacao: "", atualizacao: "", incluirColunaDataRef: "", camada: "",
+    usage: "", limitacoes: "", classificacaoSeguranca: "Internal",
+    retencao: "Não se aplica",
   });
   const [colunas, setColunas] = useState({
     numColunas: "3",
@@ -79,6 +81,11 @@ const CreateIngestion = () => {
             dataAtualizacao: metadados.dataAtualizacao,
             atualizacao: metadados.atualizacao,
             incluirColunaDataRef: metadados.incluirColunaDataRef,
+            camada: metadados.camada,
+            usage: metadados.usage,
+            limitacoes: metadados.limitacoes,
+            classificacaoSeguranca: metadados.classificacaoSeguranca,
+            retencao: metadados.retencao,
           },
           colunas: {
             numColunas: colunas.numColunas,
