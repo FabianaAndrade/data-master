@@ -173,6 +173,16 @@ class DataContractGenerator:
                 "description": "Type of data ingestion",
             },
             {
+                "property": "security_classification",
+                "value": self._metadata.get("security_classification", ""),
+                "description": "Security classification of the data",
+            },
+            {
+                "property": "retention_months",
+                "value": self._metadata.get("retention_months", ""),
+                "description": "Retention period of the data in months",
+            },
+            {
                 "property": "data_contract_execution_timestamp",
                 "value": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
                 "description": "Timestamp de execucao do data contract no databricks",
