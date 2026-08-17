@@ -47,6 +47,7 @@ interface IngestionDetailData {
   usage: string;
   limitacoes: string;
   classificacao_seguranca: string;
+  retencao: string;
   colunas: ColumnDetail[];
 }
 
@@ -303,9 +304,15 @@ const ApproveIngestion = () => {
                     </div>
                   </div>
 
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-muted-foreground">Classificação de Segurança</label>
-                    <Input value={detail.classificacao_seguranca || "Internal"} readOnly className="bg-muted font-semibold" />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-muted-foreground">Classificação de Segurança</label>
+                      <Input value={detail.classificacao_seguranca || "Internal"} readOnly className="bg-muted font-semibold" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-muted-foreground">Retenção</label>
+                      <Input value={detail.retencao || "Não se aplica"} readOnly className="bg-muted font-semibold" />
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">

@@ -73,7 +73,7 @@ class GithubPushRepos:
 
         return response.json()
 
-    def _get_file_sha(self, repo: str, file_path: str) -> str | None:
+    def _get_file_sha(self, repo: str, file_path: str, branch: str = None) -> str | None:
         """
         Obtém o SHA de um arquivo existente no repositório.
         Necessário para atualizar arquivos via Contents API.
@@ -82,13 +82,15 @@ class GithubPushRepos:
             SHA do arquivo ou None se não existir.
         """
         url = f"{self.BASE_URL}/repos/{self.org}/{repo}/contents/{file_path}"
-        response = requests.get(url, headers=self._headers())
+        params = {"ref": branch} if branch else {}
+        response = requests.get(url, headers=self._headers(), params=params)
         if response.status_code == 200:
             return response.json().get("sha")
         return None
 
     def push_file(self, repo: str, file_path: str, content: str,
-                  commit_message: str = "Add data contract") -> dict:
+                  commit_message: str = "Add data contract",
+                  branch: str = None) -> dict:
         """
         Cria ou atualiza um arquivo no repositório via Contents API.
         Se o arquivo já existir, obtém o SHA para permitir a atualização.
@@ -98,6 +100,7 @@ class GithubPushRepos:
             file_path: caminho do arquivo dentro do repo (ex: 'datacontract.yaml').
             content: conteúdo do arquivo (texto).
             commit_message: mensagem do commit.
+            branch: opcional, nome da branch onde o commit será feito.
 
         Returns:
             Resposta da API do GitHub.
@@ -111,14 +114,16 @@ class GithubPushRepos:
             "message": commit_message,
             "content": content_b64,
         }
+        if branch:
+            payload["branch"] = branch
 
         # Se o arquivo já existe (ex: vindo do template), inclui o SHA
         # para que a API permita a atualização
-        sha = self._get_file_sha(repo, file_path)
+        sha = self._get_file_sha(repo, file_path, branch)
         if sha:
             payload["sha"] = sha
-            logger.info("Arquivo [%s] já existe, atualizando (sha=%s)",
-                        file_path, sha[:8])
+            logger.info("Arquivo [%s] já existe na branch [%s], atualizando (sha=%s)",
+                        file_path, branch or "main", sha[:8])
 
         response = requests.put(url, headers=self._headers(), json=payload)
         logger.info("GitHub push file [%s/%s] — status=%s",
@@ -129,6 +134,68 @@ class GithubPushRepos:
             return {"error": response.status_code, "message": response.text}
 
         return response.json()
+
+    def get_branch_sha(self, repo: str, branch: str = "main") -> str | None:
+        """Obtém o SHA do último commit de uma branch."""
+        url = f"{self.BASE_URL}/repos/{self.org}/{repo}/git/refs/heads/{branch}"
+        response = requests.get(url, headers=self._headers())
+        if response.status_code == 200:
+            return response.json().get("object", {}).get("sha")
+        logger.error("GitHub get branch SHA error: %s", response.text)
+        return None
+
+    def create_branch(self, repo: str, branch_name: str, base_sha: str) -> dict:
+        """Cria uma nova branch no repositório baseada em um SHA existente."""
+        url = f"{self.BASE_URL}/repos/{self.org}/{repo}/git/refs"
+        payload = {
+            "ref": f"refs/heads/{branch_name}",
+            "sha": base_sha
+        }
+        response = requests.post(url, headers=self._headers(), json=payload)
+        logger.info("GitHub create branch [%s] no repo [%s] — status=%s",
+                    branch_name, repo, response.status_code)
+        if response.status_code >= 400:
+            logger.error("GitHub API error: %s", response.text)
+            return {"error": response.status_code, "message": response.text}
+        return response.json()
+
+    def create_pull_request(self, repo: str, title: str, head_branch: str, base_branch: str = "main", body: str = "") -> dict:
+        """Abre um Pull Request."""
+        url = f"{self.BASE_URL}/repos/{self.org}/{repo}/pulls"
+        payload = {
+            "title": title,
+            "head": head_branch,
+            "base": base_branch,
+            "body": body
+        }
+        response = requests.post(url, headers=self._headers(), json=payload)
+        logger.info("GitHub create PR [%s -> %s] no repo [%s] — status=%s",
+                    head_branch, base_branch, repo, response.status_code)
+        if response.status_code >= 400:
+            logger.error("GitHub API error: %s", response.text)
+            return {"error": response.status_code, "message": response.text}
+        return response.json()
+
+    def update_contract_direct(self, table_name: str, contract_yaml: str, version: int) -> dict:
+        """
+        Fluxo de edição (direto):
+        Atualiza o datacontract.yaml diretamente na branch main.
+        """
+        file_result = self.push_file(
+            repo=table_name,
+            file_path="datacontract.yaml",
+            content=contract_yaml,
+            commit_message=f"Update data contract to version {version}",
+            branch="main"
+        )
+        if "error" in file_result:
+            return file_result
+
+        return {
+            "repo": f"https://github.com/{self.org}/{table_name}",
+            "file": file_result.get("content", {}).get("html_url", ""),
+            "status": "contract_updated_in_main"
+        }
 
     def create_repo_with_contract(self, table_name: str, contract_yaml: str,
                                      team_slug: str = "mkti") -> dict:
@@ -209,3 +276,5 @@ class GithubPushRepos:
             return {"status": "ok"}
 
         return response.json()
+
+    

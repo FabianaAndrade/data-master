@@ -102,7 +102,7 @@ const IngestionHistory = () => {
                     <div className="flex items-center gap-4 text-xs text-muted-foreground mt-2">
                       <span>Responsável: <strong>{ing.responsavel || "N/A"}</strong></span>
                       {ing.detalhe && (
-                        <span>• Operação: <strong>{ing.detalhe}</strong></span>
+                        <span>• Última operação: <strong>{ing.detalhe}</strong></span>
                       )}
                     </div>
                   </div>

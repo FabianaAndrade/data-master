@@ -238,8 +238,53 @@ services:
       - app-network
     restart: unless-stopped
 
+  # ---------------------------------------------------------------------------
+  # Data Contract Manager
+  # ---------------------------------------------------------------------------
+
+  datacontract_manager:
+    image: datacontractmanager/datacontract-manager-ce:latest
+    container_name: datacontract_manager
+    restart: unless-stopped
+    environment:
+      - APPLICATION_HOST_WEB=http://localhost:8081
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://datacontract_postgres:5432/postgres
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
+      - SPRING_MAIL_HOST=mailhog
+      - SPRING_MAIL_PORT=1025
+    ports:
+      - "8081:8080"
+    depends_on:
+      - datacontract_postgres
+      - mailhog
+    networks:
+      - app-network
+
+  datacontract_postgres:
+    image: pgvector/pgvector:pg16
+    container_name: datacontract_postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - datacontract_postgres_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: mailhog
+    restart: unless-stopped
+    ports:
+      - "8025:8025"
+    networks:
+      - app-network
+
 volumes:
   postgres_data:
+  datacontract_postgres_data:
 
 networks:
   app-network:

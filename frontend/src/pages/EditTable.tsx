@@ -25,6 +25,7 @@ interface IngestionDetailData {
   periodicidade: string; formato_origem: string; tipo_atualizacao: string;
   status: string; aprovador: string; camada: string; sistema_origem: string;
   usage: string; limitacoes: string; classificacao_seguranca: string;
+  retencao: string;
   colunas: ColumnDetail[];
 }
 
@@ -62,6 +63,7 @@ const EditTable = () => {
   const [usage, setUsage] = useState("");
   const [limitations, setLimitations] = useState("");
   const [securityClassification, setSecurityClassification] = useState("Internal");
+  const [retencao, setRetencao] = useState("Não se aplica");
 
   const piiTypes = ["N/A", "CPF", "CNPJ", "Email", "Nome", "RG", "Telefone", "Endereço"];
 
@@ -114,6 +116,7 @@ const EditTable = () => {
         setUsage(data.usage || "");
         setLimitations(data.limitacoes || "");
         setSecurityClassification(data.classificacao_seguranca || "Internal");
+        setRetencao(data.retencao || "Não se aplica");
       } else { toast.error("Erro ao carregar detalhes."); setStep(0); }
     } catch { toast.error("Erro ao carregar detalhes."); setStep(0); }
     finally { setIsLoadingDetail(false); }
@@ -155,6 +158,7 @@ const EditTable = () => {
         usage: usage,
         limitations: limitations,
         security_classification: securityClassification,
+        retention_months: retencao,
       },
       columns: columns.map(c => ({
         ...c,
@@ -294,6 +298,29 @@ const EditTable = () => {
                 <div className="space-y-1"><label className="text-xs font-medium text-muted-foreground">Gestor / Aprovador Responsável</label>
                   <Input value={detail.aprovador || "N/A"} readOnly className="bg-muted" /></div>
               </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-muted-foreground">Classificação de Segurança</label>
+                  <Input value={detail.classificacao_seguranca || "Internal"} readOnly className="bg-muted font-semibold" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-muted-foreground">Retenção</label>
+                  <Input value={detail.retencao || "Não se aplica"} readOnly className="bg-muted font-semibold" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-muted-foreground">Uso (Usage)</label>
+                  <div className="text-sm p-3 bg-muted rounded-md border min-h-[60px] break-words whitespace-pre-wrap">{detail.usage || "Não informado"}</div>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-muted-foreground">Limitações</label>
+                  <div className="text-sm p-3 bg-muted rounded-md border min-h-[60px] break-words whitespace-pre-wrap">{detail.limitacoes || "Não informado"}</div>
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1"><label className="text-xs font-medium text-muted-foreground">Hora da Ingestão (Criado em)</label>
                   <Input value={detail.criado_em ? new Date(detail.criado_em).toLocaleString("pt-BR") : "N/A"} readOnly className="bg-muted" /></div>
@@ -420,6 +447,18 @@ const EditTable = () => {
                     placeholder="Descreva as limitações conhecidas"
                     className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" />
                 </div>
+              </div>
+              <div className="space-y-2 mt-4">
+                <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">Retenção <Pencil className="h-3 w-3" /></label>
+                <Select value={retencao} onValueChange={setRetencao}>
+                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Não se aplica">Não se aplica</SelectItem>
+                    {Array.from({ length: 120 }, (_, i) => i + 1).map(m => (
+                      <SelectItem key={m} value={String(m)}>{m} {m === 1 ? 'mês' : 'meses'}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 

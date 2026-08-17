@@ -86,7 +86,7 @@ const Index = () => {
               Bem-vindo ao Satus
             </h1>
             <p className="text-lg text-muted-foreground">
-              O seu hub de ingestão de dados
+              O seu portal de gestão de dados
             </p>
           </div>
 
@@ -146,7 +146,7 @@ const Index = () => {
                           <div className="flex items-center gap-4 text-xs text-muted-foreground mt-2">
                             <span>Responsável: <strong>{ing.responsavel || "N/A"}</strong></span>
                             {ing.detalhe && (
-                              <span>• Operação: <strong>{ing.detalhe}</strong></span>
+                              <span>• Última operação: <strong>{ing.detalhe}</strong></span>
                             )}
                           </div>
                         </div>

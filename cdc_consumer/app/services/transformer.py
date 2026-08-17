@@ -197,6 +197,7 @@ class DataContractGenerator:
             {"property": "sistema_origem", "value": self._metadata.get("origin", "")},
             {"property": "formato_origem", "value": self._metadata.get("origin_format", "")},
             {"property": "medallion_layer", "value": self._metadata.get("layer", "")},
+            {"property": "actual_operation", "value": self._payload.get("operation_name", "")},
         ]
 
     def build(self) -> dict[str, Any]:

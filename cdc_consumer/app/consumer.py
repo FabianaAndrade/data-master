@@ -53,6 +53,7 @@ def process_approved_ingestion(payload: dict) -> None:
 
     table_name = payload.get("table_metadata", {}).get("table_name", "unknown")
     team_name = payload.get("sigla", "")
+    version = payload.get("table_metadata", {}).get("version", 1)
 
     # Cria o repo no GitHub já com o arquivo YAML do data contract
     github = GithubPushRepos()
@@ -61,7 +62,11 @@ def process_approved_ingestion(payload: dict) -> None:
     if isinstance(contract_yaml, bytes):
         contract_yaml = contract_yaml.decode("utf-8")
         
-    result = github.create_repo_with_contract(table_name, contract_yaml, team_name)
+    if int(version) == 1:
+        result = github.create_repo_with_contract(table_name, contract_yaml, team_name)
+    else:
+        result = github.update_contract_direct(table_name, contract_yaml, int(version))
+        
     logger.info("GitHub result: %s", result)
 
 

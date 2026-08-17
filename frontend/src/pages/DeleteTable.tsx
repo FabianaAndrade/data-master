@@ -213,7 +213,7 @@ const DeleteTable = () => {
                           )}
                           <span>Responsável: <strong>{ing.responsavel || "N/A"}</strong></span>
                           {ing.detalhe && (
-                            <span>• Operação: <strong>{ing.detalhe}</strong></span>
+                            <span>• Última operação: <strong>{ing.detalhe}</strong></span>
                           )}
                         </div>
                       </div>

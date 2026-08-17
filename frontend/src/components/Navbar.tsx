@@ -24,7 +24,7 @@ const Navbar = () => {
               className={cn(
                 "rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground",
                 location.pathname === item.href &&
-                  "bg-secondary text-foreground font-medium"
+                "bg-secondary text-foreground font-medium"
               )}
             >
               {item.label}

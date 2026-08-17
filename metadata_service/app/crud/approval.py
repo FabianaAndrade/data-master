@@ -19,6 +19,7 @@ def _insert_approval_outbox(cur, ingestion_id: int) -> None:
             i.ingestion_id,
             i.status,
             i.active_version,
+            i.last_operation,
             u_approver.full_name  AS approved_by,
             s.name                AS sigla,
             itm.table_name,
@@ -74,6 +75,7 @@ def _insert_approval_outbox(cur, ingestion_id: int) -> None:
     payload = {
         "ingestion_id": ing["ingestion_id"],
         "status": ing["status"],
+        "operation_name": ing["last_operation"],
         "approved_by": ing["approved_by"],
         "sigla": ing["sigla"],
         "table_metadata": {
@@ -132,7 +134,7 @@ def approve_ingestion_db(ingestion_id: int, approved_by: int):
                     cur.execute(
                         """
                         UPDATE "ingestions"
-                        SET "status" = 'DELETED', "last_operation" = 'DELETE_APPROVED', "last_updated_by" = %s
+                        SET "status" = 'DELETED', "last_updated_by" = %s
                         WHERE "ingestion_id" = %s;
                         """,
                         (approved_by, ingestion_id)
@@ -159,7 +161,7 @@ def approve_ingestion_db(ingestion_id: int, approved_by: int):
                         cur.execute(
                             """
                             UPDATE "ingestions"
-                            SET "status" = 'APPROVED', "last_operation" = 'APPROVE', "last_updated_by" = %s, "active_version" = %s
+                            SET "status" = 'APPROVED', "last_updated_by" = %s, "active_version" = %s
                             WHERE "ingestion_id" = %s;
                             """,
                             (approved_by, pending_version, ingestion_id)
@@ -168,7 +170,7 @@ def approve_ingestion_db(ingestion_id: int, approved_by: int):
                         cur.execute(
                             """
                             UPDATE "ingestions"
-                            SET "status" = 'APPROVED', "last_operation" = 'APPROVE', "last_updated_by" = %s
+                            SET "status" = 'APPROVED', "last_updated_by" = %s
                             WHERE "ingestion_id" = %s;
                             """,
                             (approved_by, ingestion_id)
@@ -192,7 +194,7 @@ def reject_ingestion_db(ingestion_id: int, rejected_by: int):
                 cur.execute(
                     """
                     UPDATE "ingestions"
-                    SET "status" = 'REJECTED', "last_operation" = 'REJECT', "last_updated_by" = %s
+                    SET "status" = 'REJECTED', "last_updated_by" = %s
                     WHERE "ingestion_id" = %s;
                     """,
                     (rejected_by, ingestion_id)
