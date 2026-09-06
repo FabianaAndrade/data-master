@@ -101,7 +101,7 @@ class DataContractGenerator:
         return {
             "apiVersion": API_VERSION,
             "kind": CONTRACT_KIND,
-            "id": self.table_name,
+            "id": str(self._payload.get("ingestion_id", "")),
             "name": self.table_name,
             "version": str(self._metadata.get("version", "1")),
             "status": self._payload.get("status", ""),
@@ -148,8 +148,9 @@ class DataContractGenerator:
     def _build_team(self) -> dict[str, Any]:
         """Seção team."""
         approved_by = self._payload.get("approved_by", "")
+        sigla = self._payload.get("sigla", "").split("-")[0] if self._payload.get("sigla") else ""
         return {
-            "name": self._payload.get("sigla", ""),
+            "name": sigla.strip(),
             "members": [
                 {
                     "username": approved_by,

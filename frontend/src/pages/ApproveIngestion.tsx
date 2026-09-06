@@ -180,8 +180,7 @@ const ApproveIngestion = () => {
           Ingestões pendentes de aprovação
         </h1>
         <p className="text-sm text-muted-foreground mb-8">
-          Apenas ingestões da(s) sua(s) sigla(s) aparecem aqui. Você não pode aprovar
-          solicitações que você mesmo criou.
+          Apenas ingestões da(s) sua(s) sigla(s) aparecem aqui.
         </p>
 
         {isLoading ? (

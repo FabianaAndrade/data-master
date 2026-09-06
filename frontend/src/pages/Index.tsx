@@ -94,7 +94,7 @@ const Index = () => {
             {/* Actions Sidebar */}
             <div className="md:col-span-1 space-y-4">
               <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-                Ações rápidas
+                Ações
               </h2>
               <div className="space-y-2">
                 {actions.map((action) => (

@@ -3,7 +3,6 @@ import { cn } from "@/lib/utils";
 
 const navItems = [
   { label: "Minhas ingestões", href: "/ingestions" },
-  { label: "Alertas", href: "/alerts" },
   { label: "Minha Conta", href: "/account" },
 ];
 

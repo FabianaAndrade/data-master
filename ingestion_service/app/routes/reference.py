@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends
 from ..dependencies import get_current_user
 from ..schemas import ColunasParticaoRequest, DicionarioRequest
 from .. import metadata_client
+from .llm_client import generate_dictionary
 
 router = APIRouter()
 
@@ -91,15 +92,8 @@ async def gerar_dicionario_ia(
     body: DicionarioRequest,
     username: str = Depends(get_current_user),
 ):
-    """Gera descrições automáticas via IA para tabela e colunas."""
-    colunas_desc = [
-        {"nome": col, "descricao": f"Descrição gerada via IA para a coluna {col}"}
-        for col in body.colunas
-    ]
-    return {
-        "descricaoTabela": f"Tabela {body.tabela} otimizada para análise de dados e transações.",
-        "colunas": colunas_desc,
-    }
+    """Gera descricoes automaticas usando o modelo Ollama configurado."""
+    return await generate_dictionary(body.tabela, body.colunas)
 
 
 @router.get("/quality_rules/{tabela}")

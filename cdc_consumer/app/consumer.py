@@ -29,7 +29,7 @@ def connect_kafka(retries: int = 30, delay: int = 5) -> KafkaConsumer:
                 value_deserializer=lambda m: json.loads(m.decode("utf-8")) if m else None,
                 key_deserializer=lambda m: json.loads(m.decode("utf-8")) if m else None,
             )
-            logger.info("✅ Conectado ao Kafka em %s", Config.KAFKA_BOOTSTRAP_SERVERS)
+            logger.info("Conectado ao Kafka em %s", Config.KAFKA_BOOTSTRAP_SERVERS)
             return consumer
         except NoBrokersAvailable:
             logger.warning(

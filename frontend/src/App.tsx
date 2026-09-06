@@ -38,7 +38,6 @@ const App = () => (
             <Route path="/delete-table" element={<ProtectedRoute><DeleteTable /></ProtectedRoute>} />
             <Route path="/delete-success/:id" element={<ProtectedRoute><DeleteSuccess /></ProtectedRoute>} />
             <Route path="/edit-table" element={<ProtectedRoute><EditTable /></ProtectedRoute>} />
-            <Route path="/alerts" element={<ProtectedRoute><Index /></ProtectedRoute>} />
             <Route path="/resources" element={<ProtectedRoute><Index /></ProtectedRoute>} />
             <Route path="/account" element={<ProtectedRoute><MyAccount /></ProtectedRoute>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
