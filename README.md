@@ -5,3 +5,10 @@ Esse case tem como objetivo apresentar uma plataforma de dados capaz de oferecer
 
 A solução foi desenvolvida com conhecimentos interdiciplinares de engenharia de sofware, engenharia de dados e computação em nuvem. Além disso, priorizou-se a utlização de ferramentas open-source, de modo que facilitasse a reprodutibilidade. 
 
+
+# Objetivos com a solução:
+
+Na organização observo oportunidades que podem melhor a jornada do usuário, entre elas:
+- O usuário não possui uma unica interface caso ele queira criar uma tabela, ou seja, ele precisa a
+
+
