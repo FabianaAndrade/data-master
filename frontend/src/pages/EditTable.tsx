@@ -666,7 +666,7 @@ const EditTable = () => {
                       <AlertDialogDescription asChild>
                         <div className="space-y-3 pt-2 text-sm text-muted-foreground">
                           <p>
-                            As alterações na tabela <strong className="text-foreground">{tableName}</strong> impactarão os seguintes membros da sigla <strong className="text-foreground">{detail?.sigla}</strong>:
+                            As alterações na tabela  <strong className="text-foreground">#{detail.id} - {detail.tabela_nome}</strong>  impactarão os seguintes usuários consumidores da base de dados. A submissão desta edição enviará uma notificação para que eles fiquem cientes das mudanças propostas.:
                           </p>
                         <div className="rounded-md border border-border bg-muted/40 p-3 space-y-1">
                           {isLoadingConsumers ? (
@@ -676,7 +676,7 @@ const EditTable = () => {
                             </div>
                           ) : consumers.length > 0 ? (
                             <>
-                              <p className="text-xs font-semibold text-foreground">Time(s) afetado(s):</p>
+                              <p className="text-xs font-semibold text-foreground">usuários afetados:</p>
                               <div className="flex flex-wrap gap-1.5 pt-1">
                                 {consumers.map((c, i) => (
                                   <span key={i} className="bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded text-xs font-mono">

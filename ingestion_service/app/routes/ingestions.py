@@ -6,6 +6,7 @@ import httpx
 import os
 import time
 import logging
+from typing import Optional
 from ..dependencies import get_current_user
 from .. import metadata_client
 
@@ -46,86 +47,103 @@ async def get_ingestion_detail(ingestion_id: int, username: str = Depends(get_cu
     except Exception as e:
         raise HTTPException(status_code=404, detail=f"Erro ao buscar detalhes da ingestão {ingestion_id}: {str(e)}")
 
+def _build_dcm_headers() -> dict:
+    """Headers padrão para as chamadas ao Data Contract Manager."""
+    return {"x-api-key": DCM_API_KEY, "Host": DCM_HOST_HEADER, "Accept": "application/json"}
+
+
+async def _load_product_map(client: httpx.AsyncClient, headers: dict) -> None:
+    """Carrega o mapa contract_id -> product_id a partir dos data products."""
+    global DCM_PRODUCT_MAP, LAST_CACHE_UPDATE
+    res = await client.get(f"{DCM_URL}/api/dataproducts", headers=headers)
+    if res.status_code != 200:
+        logger.error("DEBUG: DCM dataproducts failed %s: %s", res.status_code, res.text)
+        return
+
+    data = res.json()
+    prods = data.get("items", []) if isinstance(data, dict) else data
+    if not isinstance(prods, list):
+        prods = []
+
+    DCM_PRODUCT_MAP.clear()
+    for p in prods or []:
+        pid = p.get("id") or p.get("dataProductId")
+        ports = p.get("outputPorts") or p.get("output_ports") or []
+        if not pid or not isinstance(ports, list):
+            continue
+        for port in ports:
+            cid = port.get("contractId") or port.get("contract_id")
+            if cid is not None:
+                DCM_PRODUCT_MAP[str(cid)] = pid
+    LAST_CACHE_UPDATE = time.time()
+    logger.info(f"DEBUG: Product map updated with {len(DCM_PRODUCT_MAP)} entries")
+
+
+async def _find_product_by_contract_id(contract_id: str) -> Optional[str]:
+    """Retorna o data product que possui o data contract (ingestion_id) informado."""
+    global DCM_PRODUCT_MAP, LAST_CACHE_UPDATE
+
+    current_time = time.time()
+    if contract_id in DCM_PRODUCT_MAP and (current_time - LAST_CACHE_UPDATE < CACHE_TTL):
+        product_id = DCM_PRODUCT_MAP[contract_id]
+        logger.info(f"DEBUG: Cache HIT -> {product_id}")
+        return product_id
+
+    logger.info(f"DEBUG: Cache MISS for {contract_id}, fetching products...")
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        headers = _build_dcm_headers()
+        await _load_product_map(client, headers)
+    logger.info(f"DEBUG: Final product_id: {DCM_PRODUCT_MAP.get(contract_id)}")
+    return DCM_PRODUCT_MAP.get(contract_id)
+
+
+async def _fetch_product_consumers(product_id: str) -> list:
+    """Busca os acessos (consumerType=user) do data product e retorna os consumidores."""
+    logger.info(f"DEBUG: Fetching access for product {product_id}")
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        headers = _build_dcm_headers()
+        params = {
+            "pageSize": 1000,
+            "providerDataProductId": product_id,
+            "consumerType": "user",
+        }
+        res = await client.get(f"{DCM_URL}/api/access", headers=headers, params=params)
+        if res.status_code != 200:
+            logger.error("DEBUG: DCM access failed %s: %s", res.status_code, res.text)
+            return []
+
+        accesses = res.json()
+        if not isinstance(accesses, list):
+            accesses = []
+
+        consumers = []
+        for access in accesses:
+            if not isinstance(access, dict):
+                continue
+            consumer = access.get("consumer") or {}
+            if not isinstance(consumer, dict):
+                continue
+            user_id = consumer.get("userId")
+            if user_id:
+                consumers.append({"name": user_id, "email": user_id})
+        logger.info(f"DEBUG: Final consumers: {consumers}")
+        return consumers
+
+
 @router.get("/impact-analysis/{ingestion_id}")
 async def get_impact_analysis(ingestion_id: int, username: str = Depends(get_current_user)):
     """
     Analisa o impacto de editar/excluir uma ingestão.
+    Fluxo: ingestion_id -> data contract -> data product -> acessos (usuários consumidores).
     """
-    global DCM_PRODUCT_MAP, LAST_CACHE_UPDATE
     logger.info(f"--- DEBUG IMPACT ANALYSIS START (ID: {ingestion_id}) ---")
-    product_id = None
     try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            headers = {"x-api-key": DCM_API_KEY, "Host": DCM_HOST_HEADER, "Accept": "application/json"}
-            s_ingestion_id = str(ingestion_id)
+        product_id = await _find_product_by_contract_id(str(ingestion_id))
+        if not product_id:
+            return {"consumers": [], "message": "No product found"}
 
-            current_time = time.time()
-            if s_ingestion_id in DCM_PRODUCT_MAP and (current_time - LAST_CACHE_UPDATE < CACHE_TTL):
-                product_id = DCM_PRODUCT_MAP[s_ingestion_id]
-                logger.info(f"DEBUG: Cache HIT -> {product_id}")
-            else:
-                logger.info(f"DEBUG: Cache MISS for {s_ingestion_id}, fetching products...")
-                res = await client.get(f"{DCM_URL}/api/dataproducts", headers=headers)
-                if res.status_code == 200:
-                    data = res.json()
-                    print(f"DEBUG: DCM response data: {data}")
-                    prods = data.get("items", []) if isinstance(data, dict) else data
-                    if not isinstance(prods, list):
-                        prods = []
-                    logger.info(f"DEBUG: Got {len(prods) if prods else 0} products")
-                    DCM_PRODUCT_MAP.clear()
-                    for p in prods or []:
-                        pid = p.get("id") or p.get("dataProductId")
-                        ports = p.get("outputPorts") or p.get("output_ports") or []
-                        if not pid or not isinstance(ports, list):
-                            continue
-                        for port in ports:
-                            cid = port.get("contractId") or port.get("contract_id")
-                            if cid is not None:
-                                DCM_PRODUCT_MAP[str(cid)] = pid
-                    LAST_CACHE_UPDATE = current_time
-                    product_id = DCM_PRODUCT_MAP.get(s_ingestion_id)
-                else:
-                    logger.error(f"DEBUG: DCM failed {res.status_code}")
-                logger.info(f"DEBUG: Final product_id: {product_id}")
-
-            if not product_id:
-                return {"consumers": [], "message": "No product found"}
-
-            logger.info(f"DEBUG: Fetching details for product {product_id}")
-            res_prod = await client.get(f"{DCM_URL}/api/dataproducts/{product_id}", headers=headers)
-            if res_prod.status_code != 200:
-                logger.error("DEBUG: DCM product failed %s: %s", res_prod.status_code, res_prod.text)
-                return {"product_id": product_id, "consumers": [], "message": "Product details unavailable"}
-            product_data = res_prod.json()
-            team = product_data.get("team")
-            team_name = team.get("name") if isinstance(team, dict) else team
-            logger.info(f"DEBUG: Team: {team_name}")
-
-            if not team_name:
-                return {"consumers": [], "message": "No team found"}
-
-            logger.info(f"DEBUG: Fetching team {team_name}")
-            res_team = await client.get(f"{DCM_URL}/api/teams/{team_name}", headers=headers)
-            if res_team.status_code != 200:
-                logger.error("DEBUG: DCM team failed %s: %s", res_team.status_code, res_team.text)
-                return {"product_id": product_id, "consumers": [], "message": "Team members unavailable"}
-            team_data = res_team.json()
-            members = team_data.get("members", []) if isinstance(team_data, dict) else team_data
-            if not isinstance(members, list):
-                members = []
-            logger.info(f"DEBUG: Got {len(members)} members")
-
-            consumers = []
-            for member in members:
-                if not isinstance(member, dict):
-                    continue
-                email = member.get("emailAddress") or member.get("email") or member.get("mail")
-                name = member.get("name") or member.get("displayName") or email
-                if email:
-                    consumers.append({"name": name, "email": email})
-            logger.info(f"DEBUG: Final consumers: {consumers}")
-            return {"product_id": product_id, "consumers": consumers}
+        consumers = await _fetch_product_consumers(product_id)
+        return {"product_id": product_id, "consumers": consumers}
     except Exception as e:
         logger.exception(f"DEBUG FATAL: {str(e)}")
         return {"consumers": [], "error": str(e)}

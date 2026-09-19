@@ -83,10 +83,10 @@ const Index = () => {
         <div className="container max-w-4xl px-4">
           <div className="text-center mb-10">
             <h1 className="text-4xl font-bold text-foreground mb-2 tracking-tight">
-              Bem-vindo ao Aggron
+              Bem-vindo ao Aggron!
             </h1>
             <p className="text-lg text-muted-foreground">
-              O seu portal de gestão de dados
+              Governe de ponta a ponta o ciclo de vida dos seus dados.
             </p>
           </div>
 
