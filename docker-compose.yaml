@@ -69,8 +69,11 @@ services:
     environment:
       - DATABASE_URL=postgresql://user:password@postgres_db:5432/data_catalog
       - METADATA_SERVICE_URL=http://metadata_service:8002
+      - DATA_CONTRACT_MANAGER_URL=${DATA_CONTRACT_MANAGER_URL:-http://datacontract_manager:8080}
       - OLLAMA_URL=http://ollama:11434
       - OLLAMA_MODEL=qwen2.5:3b
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     networks:
       - app-network
 

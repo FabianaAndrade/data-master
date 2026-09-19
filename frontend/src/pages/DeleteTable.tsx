@@ -6,7 +6,18 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "../hooks/use-auth";
 import { toast } from "sonner";
-import { Loader2, Trash2, AlertTriangle, ArrowLeft } from "lucide-react";
+import { Loader2, Trash2, AlertTriangle, ArrowLeft, Users } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const INGESTION_SERVICE_URL = (import.meta as any).env.VITE_INGESTION_SERVICE_URL ?? "http://localhost:8001";
 
@@ -64,6 +75,8 @@ const DeleteTable = () => {
 
   // Step 2: exclusão
   const [isDeleting, setIsDeleting] = useState(false);
+  const [consumers, setConsumers] = useState<{name?: string, email?: string}[]>([]);
+  const [isLoadingConsumers, setIsLoadingConsumers] = useState(false);
   const [dataExclusao, setDataExclusao] = useState("");
 
   // Buscar lista de ingestões ao montar
@@ -143,6 +156,27 @@ const DeleteTable = () => {
       setIsDeleting(false);
     }
   };
+
+  useEffect(() => {
+    if (detail?.id) {
+      setIsLoadingConsumers(true);
+      fetch(`${INGESTION_SERVICE_URL}/ingestion/impact-analysis/${detail.id}`, {
+        headers: { Authorization: `Bearer ${user?.token}` },
+      })
+        .then(res => {
+          if (!res.ok) throw new Error('Erro ao buscar análise de impacto');
+          return res.json();
+        })
+        .then(data => {
+          setConsumers(data.consumers || []);
+        })
+        .catch(err => {
+          console.warn('Erro ao buscar consumidores:', err);
+          setConsumers([]);
+        })
+        .finally(() => setIsLoadingConsumers(false));
+    }
+  }, [detail]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -391,20 +425,70 @@ const DeleteTable = () => {
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Voltar
               </Button>
-              <Button
-                variant="destructive"
-                className="flex-1 gap-2"
-                size="lg"
-                disabled={isDeleting}
-                onClick={handleDelete}
-              >
-                {isDeleting ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Trash2 className="w-4 h-4" />
-                )}
-                Solicitar exclusão
-              </Button>
+
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="destructive"
+                    className="flex-1 gap-2"
+                    size="lg"
+                    disabled={isDeleting}
+                  >
+                    {isDeleting ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="w-4 h-4" />
+                    )}
+                    Solicitar exclusão
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle className="flex items-center gap-2 text-foreground">
+                      <Users className="w-5 h-5 text-rose-500" />
+                      Impacto da Exclusão
+                    </AlertDialogTitle>
+                    <AlertDialogDescription asChild>
+                      <div className="space-y-3 pt-2 text-sm text-muted-foreground">
+                        <p>
+                          A exclusão da tabela <strong className="text-foreground">#{detail.id} - {detail.tabela_nome}</strong> impactará os seguintes membros da sigla <strong className="text-foreground">{detail?.sigla}</strong>:
+                        </p>
+                        <div className="rounded-md border border-border bg-muted/40 p-3 space-y-1">
+                          {isLoadingConsumers ? (
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground italic">
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                              Carregando consumidores...
+                            </div>
+                          ) : consumers.length > 0 ? (
+                            <>
+                              <p className="text-xs font-semibold text-foreground">Time(s) afetado(s):</p>
+                              <div className="flex flex-wrap gap-1.5 pt-1">
+                                {consumers.map((c, i) => (
+                                  <span key={i} className="bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded text-xs font-mono">
+                                    {c.email || c.name}
+                                  </span>
+                                ))}
+                              </div>
+                            </>
+                          ) : (
+                            <p className="text-xs text-muted-foreground italic">Nenhum consumidor encontrado para esta tabela.</p>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Deseja confirmar a solicitação de exclusão para aprovação?
+                        </p>
+                      </div>
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Voltar</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90 gap-2">
+                      <Trash2 className="w-4 h-4" />
+                      Confirmar Solicitação de Exclusão
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           </div>
         );

@@ -13,7 +13,7 @@ const Navbar = () => {
     <header className="border-b border-border">
       <div className="container flex h-14 items-center gap-8">
         <Link to="/" className="text-lg font-bold text-foreground">
-          Satus
+          Aggron
         </Link>
         <nav className="flex items-center gap-1">
           {navItems.map((item) => (

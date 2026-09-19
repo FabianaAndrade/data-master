@@ -7,10 +7,21 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "../hooks/use-auth";
 import { toast } from "sonner";
-import { Loader2, Pencil, PlusCircle, Trash2, ArrowLeft, Save } from "lucide-react";
+import { Loader2, Pencil, PlusCircle, Trash2, ArrowLeft, Save, Users } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const INGESTION_SERVICE_URL = (import.meta as any).env.VITE_INGESTION_SERVICE_URL ?? "http://localhost:8001";
-const TOTAL_STEPS = 4;
+const TOTAL_STEPS = 5;
 
 interface Ingestion { id: number; tabela: string; status: string; detalhe: string; responsavel: string; sigla: string; }
 
@@ -47,6 +58,8 @@ const EditTable = () => {
   const [detail, setDetail] = useState<IngestionDetailData | null>(null);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [consumers, setConsumers] = useState<{name?: string, email?: string}[]>([]);
+  const [isLoadingConsumers, setIsLoadingConsumers] = useState(false);
 
   // Editable fields
   const [tableName, setTableName] = useState("");
@@ -91,36 +104,57 @@ const EditTable = () => {
       const res = await fetch(`${INGESTION_SERVICE_URL}/ingestion/detail/${id}`, {
         headers: { Authorization: `Bearer ${user.token}` },
       });
-      if (res.ok) {
-        const data: IngestionDetailData = await res.json();
-        setDetail(data);
-        setTableName(data.tabela_nome || "");
-        setTableDescription(data.descricao || "");
-        setOriginFormat(data.formato_origem || "");
-        setPeriodicity(data.periodicidade || "");
-        setIngestionType(data.tipo_atualizacao || "");
-        setLayer(data.camada || "RAW");
-        setDataCriacao(data.data_criacao ? data.data_criacao.split("T")[0] : "");
-        setDataAtualizacao(data.inicio_ingestao ? data.inicio_ingestao.split("T")[0] : "");
-        setHorario(""); // horario is not in db schema
-        setColumns((data.colunas || []).map(c => ({
-          column_name: c.nome,
-          data_type: c.tipo_dado || "STRING",
-          column_description: c.descricao || "",
-          pii: (c.pii && c.pii !== "N/A" && c.pii !== "Não") ? true : false,
-          pii_type_id: c.pii_tipo || "N/A",
-          partition_column: c.particao === "Sim",
-        })));
-        const partitionCol = data.colunas?.find(c => c.particao === "Sim");
-        setPartitionColumn(partitionCol ? partitionCol.nome : "Nenhuma");
-        setUsage(data.usage || "");
-        setLimitations(data.limitacoes || "");
-        setSecurityClassification(data.classificacao_seguranca || "Internal");
-        setRetencao(data.retencao || "Não se aplica");
-      } else { toast.error("Erro ao carregar detalhes."); setStep(0); }
+        if (res.ok) {
+          const data: IngestionDetailData = await res.json();
+          setDetail(data);
+          setTableName(data.tabela_nome || "");
+          setTableDescription(data.descricao || "");
+          setOriginFormat(data.formato_origem || "");
+          setPeriodicity(data.periodicidade || "");
+          setIngestionType(data.tipo_atualizacao || "");
+          setLayer(data.camada || "RAW");
+          setDataCriacao(data.data_criacao ? data.data_criacao.split("T")[0] : "");
+          setDataAtualizacao(data.inicio_ingestao ? data.inicio_ingestao.split("T")[0] : "");
+          setHorario(""); // horario is not in db schema
+          setColumns((data.colunas || []).map(c => ({
+            column_name: c.nome,
+            data_type: c.tipo_dado || "STRING",
+            column_description: c.descricao || "",
+            pii: (c.pii && c.pii !== "N/A" && c.pii !== "Não") ? true : false,
+            pii_type_id: c.pii_tipo || "N/A",
+            partition_column: c.particao === "Sim",
+          })));
+          const partitionCol = data.colunas?.find(c => c.particao === "Sim");
+          setPartitionColumn(partitionCol ? partitionCol.nome : "Nenhuma");
+          setUsage(data.usage || "");
+          setLimitations(data.limitacoes || "");
+          setSecurityClassification(data.classificacao_seguranca || "Internal");
+          setRetencao(data.retencao || "Não se aplica");
+        } else { toast.error("Erro ao carregar detalhes."); setStep(0); }
     } catch { toast.error("Erro ao carregar detalhes."); setStep(0); }
     finally { setIsLoadingDetail(false); }
   };
+
+  useEffect(() => {
+    if (detail?.id) {
+      setIsLoadingConsumers(true);
+      fetch(`${INGESTION_SERVICE_URL}/ingestion/impact-analysis/${detail.id}`, {
+        headers: { Authorization: `Bearer ${user?.token}` },
+      })
+        .then(res => {
+          if (!res.ok) throw new Error('Erro ao buscar análise de impacto');
+          return res.json();
+        })
+        .then(data => {
+          setConsumers(data.consumers || []);
+        })
+        .catch(err => {
+          console.warn('Erro ao buscar consumidores:', err);
+          setConsumers([]);
+        })
+        .finally(() => setIsLoadingConsumers(false));
+    }
+  }, [detail]);
 
   const addColumn = () => {
     setColumns([...columns, { column_name: "", data_type: "STRING", column_description: "", pii: false, pii_type_id: "N/A", partition_column: false }]);
@@ -142,46 +176,54 @@ const EditTable = () => {
     if (columns.some(c => !c.column_name)) { toast.error("Todas as colunas precisam de um nome."); return; }
 
     setIsSubmitting(true);
-    const body = {
-      table_metadata: {
-        table_name: tableName,
-        table_description: tableDescription,
-        layer: layer,
-        origin_id: 1,
-        origin_format: originFormat,
-        periodicity: periodicity,
-        ingestion_type: ingestionType,
-        inicio_atualizacao: dataAtualizacao,
-        data_criacao: dataCriacao,
-        horario: horario,
-        tipo_atualizacao: ingestionType,
-        usage: usage,
-        limitations: limitations,
-        security_classification: securityClassification,
-        retention_months: retencao,
-      },
-      columns: columns.map(c => ({
-        ...c,
-        partition_column: c.column_name === partitionColumn,
-        pii_type_id: c.pii ? c.pii_type_id : "N/A"
-      })),
-    };
-
     try {
+      const body = {
+        table_metadata: {
+          table_name: tableName,
+          table_description: tableDescription,
+          layer: layer,
+          origin_id: 1,
+          origin_format: originFormat,
+          periodicity: periodicity,
+          ingestion_type: ingestionType,
+          inicio_atualizacao: dataAtualizacao,
+          data_criacao: dataCriacao,
+          horario: horario,
+          tipo_atualizacao: ingestionType,
+          usage: usage,
+          limitations: limitations,
+           security_classification: securityClassification,
+           retention_months: retencao,
+         },
+         columns: columns.map(c => ({
+          ...c,
+          partition_column: c.column_name === partitionColumn,
+          pii_type_id: c.pii ? c.pii_type_id : "N/A"
+        })),
+      };
+
       const res = await fetch(`${INGESTION_SERVICE_URL}/ingestion/edit/${selectedId}`, {
         method: "PUT",
-        headers: { Authorization: `Bearer ${user.token}`, "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${user.token}`,
+        },
         body: JSON.stringify(body),
       });
+
       if (res.ok) {
-        toast.success("Edição enviada para aprovação! Aguarde o gestor aprovar as alterações.");
-        navigate("/");
+        toast.success("Edição submetida para aprovação!");
+        setStep(0);
+        setSelectedId(null);
       } else {
-        const err = await res.json().catch(() => ({}));
-        toast.error(err.detail ?? "Erro ao salvar edição.");
+        const err = await res.json();
+        toast.error(err.detail || "Erro ao submeter edição.");
       }
-    } catch { toast.error("Erro ao salvar edição."); }
-    finally { setIsSubmitting(false); }
+    } catch (err) {
+      toast.error("Erro de conexão com o servidor.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -397,8 +439,8 @@ const EditTable = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-1">
-                  <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">Tipo Ingestão <Pencil className="h-3 w-3" /></label>
+                 <div className="space-y-1">
+                   <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">Tipo Ingestão <Pencil className="h-3 w-3" /></label>
                   <Select value={ingestionType} onValueChange={setIngestionType}>
                     <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                     <SelectContent>
@@ -607,10 +649,61 @@ const EditTable = () => {
               <Button variant="outline" className="flex-1" onClick={() => setStep(2)}>
                 <ArrowLeft className="w-4 h-4 mr-2" /> Voltar para edição
               </Button>
-              <Button className="flex-1 gap-2" size="lg" disabled={isSubmitting} onClick={handleSubmit}>
-                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                Submeter edição
-              </Button>
+
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button className="flex-1 gap-2" size="lg" disabled={isSubmitting}>
+                    {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                    Submeter edição
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle className="flex items-center gap-2 text-foreground">
+                        <Users className="w-5 h-5 text-amber-500" />
+                        Impacto da Edição
+                      </AlertDialogTitle>
+                      <AlertDialogDescription asChild>
+                        <div className="space-y-3 pt-2 text-sm text-muted-foreground">
+                          <p>
+                            As alterações na tabela <strong className="text-foreground">{tableName}</strong> impactarão os seguintes membros da sigla <strong className="text-foreground">{detail?.sigla}</strong>:
+                          </p>
+                        <div className="rounded-md border border-border bg-muted/40 p-3 space-y-1">
+                          {isLoadingConsumers ? (
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground italic">
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                              Carregando consumidores...
+                            </div>
+                          ) : consumers.length > 0 ? (
+                            <>
+                              <p className="text-xs font-semibold text-foreground">Time(s) afetado(s):</p>
+                              <div className="flex flex-wrap gap-1.5 pt-1">
+                                {consumers.map((c, i) => (
+                                  <span key={i} className="bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded text-xs font-mono">
+                                    {c.email || c.name}
+                                  </span>
+                                ))}
+                              </div>
+                            </>
+                          ) : (
+                            <p className="text-xs text-muted-foreground italic">Nenhum consumidor encontrado para esta tabela.</p>
+                          )}
+                        </div>
+                          <p className="text-xs text-muted-foreground">
+                            Deseja confirmar a submissão destas alterações?
+                          </p>
+                        </div>
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleSubmit} className="bg-primary text-primary-foreground hover:bg-primary/90 gap-2">
+                        <Save className="w-4 h-4" />
+                        Confirmar e Submeter
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
             </div>
           </div>
         );
