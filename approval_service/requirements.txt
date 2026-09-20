@@ -3,3 +3,4 @@ httpx
 psycopg2-binary
 PyJWT
 uvicorn
+prometheus-fastapi-instrumentator

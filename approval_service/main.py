@@ -1,3 +1,4 @@
+from prometheus_fastapi_instrumentator import Instrumentator
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routes import router
@@ -7,6 +8,8 @@ app = FastAPI(
     description="API para gerenciar aprovações de ingestão de dados.",
     version="1.0.0",
 )
+
+Instrumentator().instrument(app).expose(app)
 
 app.add_middleware(
     CORSMiddleware,
