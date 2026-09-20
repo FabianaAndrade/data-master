@@ -179,9 +179,12 @@ const DeleteTable = () => {
   }, [detail]);
 
   const getStatusColor = (status: string) => {
-    switch (status) {
+    switch (status?.toUpperCase()) {
+      case "SUCCESS":
+        return "bg-blue-500/10 text-blue-500 border-blue-500/20";
       case "APPROVED":
         return "bg-emerald-500/10 text-emerald-500 border-emerald-500/20";
+      case "FAILED":
       case "REJECTED":
         return "bg-destructive/10 text-destructive border-destructive/20";
       case "CANCELLED":
@@ -196,8 +199,10 @@ const DeleteTable = () => {
   };
 
   const getStatusLabel = (status: string) => {
-    switch (status) {
+    switch (status?.toUpperCase()) {
+      case "SUCCESS": return "Implantado com Sucesso";
       case "APPROVED": return "Aprovada";
+      case "FAILED": return "Falhou";
       case "REJECTED": return "Rejeitada";
       case "CANCELLED": return "Cancelada";
       case "PENDING_DELETE": return "Exclusão Pendente";

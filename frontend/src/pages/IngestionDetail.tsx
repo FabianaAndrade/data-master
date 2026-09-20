@@ -149,8 +149,10 @@ const IngestionDetail = () => {
   if (!detail) return null;
 
   const getStatusLabel = (status: string) => {
-    switch (status) {
+    switch (status?.toUpperCase()) {
+      case "SUCCESS": return "Implantado com Sucesso";
       case "APPROVED": return "Aprovada";
+      case "FAILED": return "Falhou";
       case "REJECTED": return "Rejeitada";
       case "PENDING_DELETE": return "Exclusão Pendente";
       case "DELETED": return "Excluída";
@@ -333,4 +335,3 @@ const IngestionDetail = () => {
 };
 
 export default IngestionDetail;
-

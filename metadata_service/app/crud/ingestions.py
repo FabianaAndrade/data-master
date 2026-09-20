@@ -8,7 +8,7 @@ from ..schemas import FullIngestionRequest, IngestionRequest
 from .helpers import get_or_create_user, get_or_create_sigla, parse_date
 
 
-def update_execution_status_db(ingestion_id: int, status: str) -> dict:
+def update_execution_status_db(ingestion_id: str, status: str) -> dict:
     """Atualiza o status da ingestão para SUCCESS ou FAILED após a execução da pipeline."""
     conn = get_db_connection()
     try:
@@ -17,8 +17,8 @@ def update_execution_status_db(ingestion_id: int, status: str) -> dict:
         with conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    'UPDATE "ingestions" SET "status" = %s, "last_operation" = %s WHERE "ingestion_id" = %s RETURNING "ingestion_id";',
-                    (status_upper, operation, ingestion_id)
+                    'UPDATE "ingestions" SET "status" = %s  WHERE "ingestion_id" = %s RETURNING "ingestion_id";',
+                    (status_upper, ingestion_id)
                 )
                 row = cur.fetchone()
                 if not row:

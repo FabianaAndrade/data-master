@@ -18,9 +18,10 @@ router = APIRouter()
 
 
 @router.post("/ingestions/{ingestion_id}/execution-status", response_model=Dict[str, Any], status_code=200)
-def update_execution_status(ingestion_id: int, body: ExecutionStatusBody):
+def update_execution_status(ingestion_id: str, body: ExecutionStatusBody):
     """Atualiza o status de execução da ingestão (SUCCESS/FAILED)."""
     result = crud.update_execution_status_db(ingestion_id=ingestion_id, status=body.status)
+    
     if "error" in result:
         if result["error"] == "not_found":
             raise HTTPException(status_code=404, detail=result["message"])
