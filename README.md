@@ -23,21 +23,35 @@ Na organização observo oportunidades que podem melhor a jornada do usuário, e
 
 <img src="figures/image-1.png" alt="Aggron Pokémon" width="150">
 
-### **Explicação dos Compoentes**: ###
+### **Explicação dos Componentes**: ###
 #### **Frontend** ####
 
 A solução oferece uma interface responsável por permitir que usuários criem, editem e deletem tabelas do data lake. Por meio de uma interface amigável, que tanto o usuário de negócio, quanto engenheiros, podem utilizar, o usuário pode submeter suas solicitações. 
 
 Todas as solicitações passam por um processo de aprovação, dessa forma, o owner da sigla/technical lead precisa aprovar a implantação. Após aprovação, a implementação segue de forma automática.
+
+
+A implementação foi realizada com React 18 (SPA) e TypeScript, utilizando Vite 5 como servidor de desenvolvimento e ferramenta de build.
+
+A navegação é feita com react-router-dom e o gerenciamento de estado de dados remotos com @tanstack/react-query.
+
+O frontend consome APIs REST do backend via fetch, com URLs configuradas por variáveis de ambiente (`VITE_AUTH_SERVICE_URL`, `VITE_INGESTION_SERVICE_URL`, `VITE_APPROVAL_SERVICE_URL`).
+
+A autenticação é baseada em JWT, com rotas protegidas no frontend e sessão persistida no navegador.
+
 ![alt text](figures/image.png)
 
 #### **LDAP Server** ###
 A autenticação na plataforma é gerenciada a partir de um servidor LDAP.
-No LDAP implementado, foi cadastrado previamente algumas siglas e usuários, assim sendo os usuários so conseguem abrir solicitações para tabelas da própria sigla, bem como os aprovadores (owners) das siglas sao consumidos com base no que está cadastrado no LDAP.
+No LDAP implementado, foi cadastrado previamente algumas siglas e usuários, assim sendo os usuários so conseguem abrir solicitações para tabelas da própria sigla, bem como os aprovadores (owners) das siglas são consumidos com base no que está cadastrado no LDAP.
+
+<img src="figures/ldap_logica.png" alt="Aggron Pokémon" width="400">
+
+
 
 #### **Camada de microserviços**
 todotodo
-#### **Processamento real-time**
+#### **Processamento streaming**
 todotodo
 #### **CI/CD**
 todotodo

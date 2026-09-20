@@ -5,10 +5,10 @@ import Navbar from "@/components/Navbar";
 import { useAuth } from "../hooks/use-auth";
 
 const actions = [
-  { icon: Plus, label: "Criar nova ingestão", href: "/create-ingestion" },
+  { icon: Plus, label: "Criar nova tabela", href: "/create-ingestion" },
   { icon: Pencil, label: "Editar tabela", href: "/edit-table" },
   { icon: Trash2, label: "Excluir tabela", href: "/delete-table" },
-  { icon: CheckCircle, label: "Aprovar ingestão de dados", href: "/approve-ingestion" },
+  { icon: CheckCircle, label: "Aprovar requisição", href: "/approve-ingestion" },
 ];
 
 interface Ingestion {
