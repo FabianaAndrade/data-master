@@ -7,7 +7,7 @@ class Config:
     CONSUMER_GROUP_ID = os.getenv("CONSUMER_GROUP_ID", "cdc-approved-ingestions")
 
     # GitHub
-    GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "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") # Ideal is to provide it via env var
+    GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
     GITHUB_ORG = os.getenv("GITHUB_ORG", "satus-org")
 
     # Misc

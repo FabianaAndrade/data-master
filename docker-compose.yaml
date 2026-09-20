@@ -11,9 +11,9 @@ services:
       - "-c"
       - "max_wal_senders=4"
     environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: data_catalog
+      POSTGRES_USER: ${POSTGRES_USER:-user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: ${POSTGRES_DB:-data_catalog}
     ports:
       - "127.0.0.1:5433:5432"
     volumes:
@@ -22,7 +22,7 @@ services:
     networks:
       - app-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user -d data_catalog"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-user} -d ${POSTGRES_DB:-data_catalog}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -35,7 +35,7 @@ services:
     environment:
       LDAP_ORGANISATION: "empresa"
       LDAP_DOMAIN: "empresa.com"
-      LDAP_ADMIN_PASSWORD: "admin"
+      LDAP_ADMIN_PASSWORD: ${LDAP_ADMIN_PASSWORD:-admin}
       LDAP_REMOVE_CONFIG_AFTER_SETUP: "false"
     ports:
       - "127.0.0.1:389:389"
@@ -51,6 +51,9 @@ services:
       - "127.0.0.1:8000:8000"
     depends_on:
       - ldap
+    environment:
+      - JWT_SECRET=${JWT_SECRET:-secret_key}
+      - LDAP_ADMIN_PASSWORD=${LDAP_ADMIN_PASSWORD:-admin}
     networks:
       - app-network
 
@@ -67,11 +70,15 @@ services:
       metadata_service:
         condition: service_started
     environment:
-      - DATABASE_URL=postgresql://user:password@postgres_db:5432/data_catalog
-      - METADATA_SERVICE_URL=http://metadata_service:8002
+      - DATABASE_URL=${DATABASE_URL:-postgresql://user:password@postgres_db:5432/data_catalog}
+      - METADATA_SERVICE_URL=${METADATA_SERVICE_URL:-http://metadata_service:8002}
+      - AUTH_SERVICE_URL=${AUTH_SERVICE_URL:-http://auth_service:8000}
+      - JWT_SECRET=${JWT_SECRET:-secret_key}
       - DATA_CONTRACT_MANAGER_URL=${DATA_CONTRACT_MANAGER_URL:-http://datacontract_manager:8080}
-      - OLLAMA_URL=http://ollama:11434
-      - OLLAMA_MODEL=qwen2.5:3b
+      - DATA_CONTRACT_MANAGER_HOST=${DATA_CONTRACT_MANAGER_HOST:-localhost:8081}
+      - DATA_CONTRACT_API_KEY=${DATA_CONTRACT_API_KEY:-}
+      - OLLAMA_URL=${OLLAMA_URL:-http://ollama:11434}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-qwen2.5:3b}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:
@@ -95,7 +102,7 @@ services:
       postgres_db:
         condition: service_healthy
     environment:
-      - DATABASE_URL=postgresql://user:password@postgres_db:5432/data_catalog
+      - DATABASE_URL=${DATABASE_URL:-postgresql://user:password@postgres_db:5432/data_catalog}
     networks:
       - app-network
 
@@ -108,7 +115,8 @@ services:
       - auth_service
       - metadata_service
     environment:
-      - METADATA_SERVICE_URL=http://metadata_service:8002
+      - METADATA_SERVICE_URL=${METADATA_SERVICE_URL:-http://metadata_service:8002}
+      - JWT_SECRET=${JWT_SECRET:-secret_key}
     networks:
       - app-network
 
@@ -204,14 +212,14 @@ services:
         echo '🚀 Registrando connector Debezium (ingestions)...'
         wget --quiet --output-document=- \
           --header='Content-Type: application/json' \
-          --post-data='{"name":"ingestions-connector","config":{"connector.class":"io.debezium.connector.postgresql.PostgresConnector","database.hostname":"postgres_db","database.port":"5432","database.user":"user","database.password":"password","database.dbname":"data_catalog","topic.prefix":"dbserver1","table.include.list":"public.ingestions","plugin.name":"pgoutput","slot.name":"debezium_slot","publication.name":"dbz_publication","publication.autocreate.mode":"filtered","key.converter":"org.apache.kafka.connect.json.JsonConverter","key.converter.schemas.enable":"false","value.converter":"org.apache.kafka.connect.json.JsonConverter","value.converter.schemas.enable":"false","snapshot.mode":"initial"}}' \
+          --post-data='{"name":"ingestions-connector","config":{"connector.class":"io.debezium.connector.postgresql.PostgresConnector","database.hostname":"postgres_db","database.port":"5432","database.user":"${POSTGRES_USER:-user}","database.password":"${POSTGRES_PASSWORD:-password}","database.dbname":"${POSTGRES_DB:-data_catalog}","topic.prefix":"dbserver1","table.include.list":"public.ingestions","plugin.name":"pgoutput","slot.name":"debezium_slot","publication.name":"dbz_publication","publication.autocreate.mode":"filtered","key.converter":"org.apache.kafka.connect.json.JsonConverter","key.converter.schemas.enable":"false","value.converter":"org.apache.kafka.connect.json.JsonConverter","value.converter.schemas.enable":"false","snapshot.mode":"initial"}}' \
           http://kafka-connect:8083/connectors 2>&1 || true
         echo ''
         sleep 3
         echo '🚀 Registrando connector Outbox (EventRouter)...'
         wget --quiet --output-document=- \
           --header='Content-Type: application/json' \
-          --post-data='{"name":"outbox-connector","config":{"connector.class":"io.debezium.connector.postgresql.PostgresConnector","database.hostname":"postgres_db","database.port":"5432","database.user":"user","database.password":"password","database.dbname":"data_catalog","topic.prefix":"outbox","table.include.list":"public.outbox","plugin.name":"pgoutput","slot.name":"debezium_outbox_slot","publication.name":"dbz_outbox_publication","publication.autocreate.mode":"filtered","tombstones.on.delete":"false","key.converter":"org.apache.kafka.connect.json.JsonConverter","key.converter.schemas.enable":"false","value.converter":"org.apache.kafka.connect.json.JsonConverter","value.converter.schemas.enable":"false","transforms":"outbox","transforms.outbox.type":"io.debezium.transforms.outbox.EventRouter","transforms.outbox.table.field.event.id":"id","transforms.outbox.table.field.event.key":"aggregateid","transforms.outbox.table.field.event.payload":"payload","transforms.outbox.table.field.event.timestamp":"created_at","transforms.outbox.route.topic.replacement":"$${routedByValue}.events"}}' \
+          --post-data='{"name":"outbox-connector","config":{"connector.class":"io.debezium.connector.postgresql.PostgresConnector","database.hostname":"postgres_db","database.port":"5432","database.user":"${POSTGRES_USER:-user}","database.password":"${POSTGRES_PASSWORD:-password}","database.dbname":"${POSTGRES_DB:-data_catalog}","topic.prefix":"outbox","table.include.list":"public.outbox","plugin.name":"pgoutput","slot.name":"debezium_outbox_slot","publication.name":"dbz_outbox_publication","publication.autocreate.mode":"filtered","tombstones.on.delete":"false","key.converter":"org.apache.kafka.connect.json.JsonConverter","key.converter.schemas.enable":"false","value.converter":"org.apache.kafka.connect.json.JsonConverter","value.converter.schemas.enable":"false","transforms":"outbox","transforms.outbox.type":"io.debezium.transforms.outbox.EventRouter","transforms.outbox.table.field.event.id":"id","transforms.outbox.table.field.event.key":"aggregateid","transforms.outbox.table.field.event.payload":"payload","transforms.outbox.table.field.event.timestamp":"created_at","transforms.outbox.route.topic.replacement":"$${routedByValue}.events"}}' \
           http://kafka-connect:8083/connectors 2>&1 || true
         echo ''
         sleep 3
@@ -245,9 +253,12 @@ services:
       kafka:
         condition: service_healthy
     environment:
-      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
-      - CDC_TOPIC=ingestion.events
-      - CONSUMER_GROUP_ID=cdc-approved-ingestions
+      - KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS:-kafka:29092}
+      - CDC_TOPIC=${CDC_TOPIC:-ingestion.events}
+      - CONSUMER_GROUP_ID=${CONSUMER_GROUP_ID:-cdc-approved-ingestions}
+      - GITHUB_TOKEN=${GITHUB_TOKEN:-}
+      - GITHUB_ORG=${GITHUB_ORG:-satus-org}
+      - DATA_CONTRACT_OUTPUT_DIR=${DATA_CONTRACT_OUTPUT_DIR:-.}
     networks:
       - app-network
     restart: unless-stopped
@@ -263,7 +274,7 @@ services:
       - APPLICATION_HOST_WEB=http://localhost:8081
       - SPRING_DATASOURCE_URL=jdbc:postgresql://datacontract_postgres:5432/postgres
       - SPRING_DATASOURCE_USERNAME=postgres
-      - SPRING_DATASOURCE_PASSWORD=postgres
+      - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD:-postgres}
       - SPRING_MAIL_HOST=mailhog
       - SPRING_MAIL_PORT=1025
     ports:
@@ -279,8 +290,8 @@ services:
     container_name: datacontract_postgres
     restart: unless-stopped
     environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_USER=${DATACONTRACT_POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${DATACONTRACT_POSTGRES_PASSWORD:-postgres}
     volumes:
       - datacontract_postgres_data:/var/lib/postgresql/data
     networks:

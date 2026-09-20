@@ -23,7 +23,7 @@ CACHE_TTL = 3600  # Cache expires every hour (in seconds)
 
 # Constants for Data Contract Manager
 DCM_URL = os.getenv("DATA_CONTRACT_MANAGER_URL", "http://datacontract_manager:8080").rstrip("/")
-DCM_API_KEY = os.getenv("DATA_CONTRACT_API_KEY", "ed_live_user_i619nOoJlcm8SKvJf43VRxeaus5h3zrHUSdnxBXXd4IeQxGL0KJ2GAPhbcnrGIlH")
+DCM_API_KEY = os.getenv("DATA_CONTRACT_API_KEY", "")
 # The DCM (Spring Boot) rejects requests where Host header != APPLICATION_HOST_WEB
 DCM_HOST_HEADER = os.getenv("DATA_CONTRACT_MANAGER_HOST", "localhost:8081")
 
