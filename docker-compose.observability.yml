@@ -73,7 +73,6 @@ services:
       - ./monitoring/prometheus/blackbox.yml:/etc/blackbox/blackbox.yml 
     networks:
       - app-network
-    # (blackbox.yml precisa ser criado também)
 
   loadtest:
     image: locustio/locust:latest

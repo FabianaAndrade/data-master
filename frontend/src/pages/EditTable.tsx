@@ -239,7 +239,7 @@ const EditTable = () => {
     }
   };
   const getStatusLabel = (s: string) => {
-    switch (s?.toUpperCase()) { case "SUCCESS": return "Implantado com Sucesso"; case "APPROVED": return "Aprovada"; case "FAILED": return "Falhou"; case "REJECTED": return "Rejeitada"; case "CANCELLED": return "Cancelada"; case "PENDING_DELETE": return "Exclusão Pendente"; case "DELETED": return "Excluída"; default: return "Pendente"; }
+    switch (s?.toUpperCase()) { case "SUCCESS": return "Completo"; case "APPROVED": return "Aprovada"; case "FAILED": return "Falhou"; case "REJECTED": return "Rejeitada"; case "CANCELLED": return "Cancelada"; case "PENDING_DELETE": return "Exclusão Pendente"; case "DELETED": return "Excluída"; default: return "Pendente"; }
   };
 
   const renderStep = () => {

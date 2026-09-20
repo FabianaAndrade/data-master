@@ -21,7 +21,7 @@ Na organização observo oportunidades que podem melhor a jornada do usuário, e
 
 *Fun-fact*: O nome "Aggron" vem de um pokémon. Ele foi escolhido para representar a plataforma depois de muitas tentativas de escolher um nome legal.
 
-<img src="image-1.png" alt="Aggron Pokémon" width="150">
+<img src="figures/image-1.png" alt="Aggron Pokémon" width="150">
 
 ### **Explicação dos Compoentes**: ###
 #### **Frontend** ####
@@ -29,7 +29,7 @@ Na organização observo oportunidades que podem melhor a jornada do usuário, e
 A solução oferece uma interface responsável por permitir que usuários criem, editem e deletem tabelas do data lake. Por meio de uma interface amigável, que tanto o usuário de negócio, quanto engenheiros, podem utilizar, o usuário pode submeter suas solicitações. 
 
 Todas as solicitações passam por um processo de aprovação, dessa forma, o owner da sigla/technical lead precisa aprovar a implantação. Após aprovação, a implementação segue de forma automática.
-![alt text](image.png)
+![alt text](figures/image.png)
 
 #### **LDAP Server** ###
 A autenticação na plataforma é gerenciada a partir de um servidor LDAP.

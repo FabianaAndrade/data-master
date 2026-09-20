@@ -150,7 +150,7 @@ const IngestionDetail = () => {
 
   const getStatusLabel = (status: string) => {
     switch (status?.toUpperCase()) {
-      case "SUCCESS": return "Implantado com Sucesso";
+      case "SUCCESS": return "Completo";
       case "APPROVED": return "Aprovada";
       case "FAILED": return "Falhou";
       case "REJECTED": return "Rejeitada";
