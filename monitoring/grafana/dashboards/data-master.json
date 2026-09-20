@@ -4,22 +4,20 @@
   "metadata": {
     "name": "data-master-overview",
     "namespace": "default",
-    "uid": "e2b00352-0b5f-4090-bb20-c7a7040ff7ca",
-    "resourceVersion": "1789929086357018",
-    "generation": 10,
-    "creationTimestamp": "2026-09-20T14:29:58Z",
+    "uid": "82ea8c57-2df3-4355-b1d1-c2c025d43653",
+    "resourceVersion": "1789929690415017",
+    "generation": 1,
+    "creationTimestamp": "2026-09-20T18:41:30Z",
     "labels": {
-      "grafana.app/deprecatedInternalID": "3002842912059392"
+      "grafana.app/deprecatedInternalID": "3066144325132288"
     },
     "annotations": {
       "grafana.app/createdBy": "access-policy:service",
       "grafana.app/managedBy": "classic-file-provisioning",
       "grafana.app/managerId": "default",
-      "grafana.app/sourceChecksum": "8b0be03055572017cdb325f6160d9b58",
+      "grafana.app/sourceChecksum": "fee59b744e281a78dbde29a30756d58e",
       "grafana.app/sourcePath": "/var/lib/grafana/dashboards/data-master.json",
-      "grafana.app/sourceTimestamp": "1789929081000",
-      "grafana.app/updatedBy": "access-policy:service",
-      "grafana.app/updatedTimestamp": "2026-09-20T18:31:26Z",
+      "grafana.app/sourceTimestamp": "1789929218000",
       "grafana.app/folder": ""
     }
   },
@@ -1740,82 +1738,6 @@
           }
         }
       },
-      "panel-8": {
-        "kind": "Panel",
-        "spec": {
-          "data": {
-            "kind": "QueryGroup",
-            "spec": {
-              "queries": [
-                {
-                  "kind": "PanelQuery",
-                  "spec": {
-                    "hidden": false,
-                    "query": {
-                      "group": "",
-                      "kind": "DataQuery",
-                      "spec": {
-                        "expr": "pg_stat_database_numbackends{datname!~\"template.*\"}",
-                        "legendFormat": "{{datname}}"
-                      },
-                      "version": "v0"
-                    },
-                    "refId": "A"
-                  }
-                }
-              ],
-              "queryOptions": {},
-              "transformations": []
-            }
-          },
-          "description": "",
-          "id": 8,
-          "links": [],
-          "title": "Conexões ativas",
-          "vizConfig": {
-            "group": "stat",
-            "kind": "VizConfig",
-            "spec": {
-              "fieldConfig": {
-                "defaults": {
-                  "thresholds": {
-                    "mode": "absolute",
-                    "steps": [
-                      {
-                        "color": "green",
-                        "value": 0
-                      }
-                    ]
-                  },
-                  "unit": "short"
-                },
-                "overrides": []
-              },
-              "options": {
-                "colorMode": "value",
-                "graphMode": "area",
-                "justifyMode": "auto",
-                "orientation": "auto",
-                "percentChangeColorMode": "standard",
-                "reduceOptions": {
-                  "calcs": [
-                    "lastNotNull"
-                  ],
-                  "fields": "",
-                  "values": false
-                },
-                "showPercentChange": false,
-                "sparkline": {
-                  "show": true
-                },
-                "textMode": "value_and_name",
-                "wideLayout": true
-              }
-            },
-            "version": "13.2.1"
-          }
-        }
-      },
       "panel-9": {
         "kind": "Panel",
         "spec": {
@@ -2077,7 +1999,7 @@
                       "spec": {
                         "element": {
                           "kind": "ElementReference",
-                          "name": "panel-8"
+                          "name": "panel-100"
                         },
                         "height": 6,
                         "width": 8,
@@ -2103,24 +2025,11 @@
                       "spec": {
                         "element": {
                           "kind": "ElementReference",
-                          "name": "panel-100"
-                        },
-                        "height": 6,
-                        "width": 8,
-                        "x": 0,
-                        "y": 6
-                      }
-                    },
-                    {
-                      "kind": "GridLayoutItem",
-                      "spec": {
-                        "element": {
-                          "kind": "ElementReference",
                           "name": "panel-9"
                         },
                         "height": 6,
-                        "width": 8,
-                        "x": 8,
+                        "width": 12,
+                        "x": 0,
                         "y": 6
                       }
                     },
@@ -2132,8 +2041,8 @@
                           "name": "panel-10"
                         },
                         "height": 6,
-                        "width": 8,
-                        "x": 16,
+                        "width": 12,
+                        "x": 12,
                         "y": 6
                       }
                     },
