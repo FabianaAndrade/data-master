@@ -11,12 +11,28 @@ from ..schemas import (
     FullIngestionRequest,
     IngestionRequestUpdate,
     CancelByUserBody,
+    ExecutionStatusBody,
 )
 
 router = APIRouter()
 
 
+@router.post("/ingestions/{ingestion_id}/execution-status", response_model=Dict[str, Any], status_code=200)
+def update_execution_status(ingestion_id: int, body: ExecutionStatusBody):
+    """Atualiza o status de execução da ingestão (SUCCESS/FAILED)."""
+    result = crud.update_execution_status_db(ingestion_id=ingestion_id, status=body.status)
+    if "error" in result:
+        if result["error"] == "not_found":
+            raise HTTPException(status_code=404, detail=result["message"])
+        raise HTTPException(status_code=500, detail=result["message"])
+    return {
+        "ingestion_id": ingestion_id,
+        "status": result["status"],
+        "message": result["message"]
+    }
+
 @router.get("/ingestions/list", response_model=Dict[str, Any], status_code=200)
+
 def list_ingestions(username: str = None):
     """
     Lista ingestões.

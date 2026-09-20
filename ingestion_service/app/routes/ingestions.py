@@ -6,8 +6,9 @@ import httpx
 import os
 import time
 import logging
-from typing import Optional
+from typing import Any, Dict, Optional
 from ..dependencies import get_current_user
+from ..schemas import ExecutionStatusBody
 from .. import metadata_client
 
 logger = logging.getLogger("uvicorn")
@@ -26,6 +27,13 @@ DCM_API_KEY = os.getenv("DATA_CONTRACT_API_KEY", "ed_live_user_i619nOoJlcm8SKvJf
 # The DCM (Spring Boot) rejects requests where Host header != APPLICATION_HOST_WEB
 DCM_HOST_HEADER = os.getenv("DATA_CONTRACT_MANAGER_HOST", "localhost:8081")
 
+@router.post("/execution-status/{ingestion_id}", response_model=Dict[str, Any], status_code=200)
+async def update_execution_status(ingestion_id: int, body: ExecutionStatusBody):
+    """Atualiza o status de execução da ingestão (success/failed). Chamado pelo GitHub Actions."""
+    return await metadata_client.metadata_post(
+        f"/ingestions/{ingestion_id}/execution-status",
+        json={"status": body.status},
+    )
 
 @router.get("/detail/{ingestion_id}")
 async def get_ingestion_detail(ingestion_id: int, username: str = Depends(get_current_user)):

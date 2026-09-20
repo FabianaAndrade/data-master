@@ -2,10 +2,13 @@
 Schemas Pydantic do metadata_service.
 Todos os modelos de request/response ficam neste único arquivo.
 """
-from typing import List, Optional, Union
+from typing import List, Optional, Union, Literal
 
 from pydantic import BaseModel
 
+
+class ExecutionStatusBody(BaseModel):
+    status: Literal["success", "failed"]
 
 # ---------------------------------------------------------------------------
 # Modelos de criação de ingestão (FullIngestionRequest)
