@@ -5,3 +5,17 @@ datasources:
     url: http://prometheus:9090
     access: proxy
     isDefault: true
+
+  - name: PostgreSQL
+    uid: data-master-pg
+    type: postgres
+    url: postgres_db:5432
+    access: proxy
+    user: ${POSTGRES_USER}
+    secureJsonData:
+      password: ${POSTGRES_PASSWORD}
+    jsonData:
+      database: ${POSTGRES_DB}
+      sslmode: disable
+      postgresVersion: 1300
+      timescaledb: false

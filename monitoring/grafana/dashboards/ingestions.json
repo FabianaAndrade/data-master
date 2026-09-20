@@ -1,0 +1,629 @@
+{
+  "uid": "ingestoes-dados",
+  "title": "Ingestões — Dados (PostgreSQL)",
+  "tags": ["data-master", "ingestions"],
+  "schemaVersion": 39,
+  "version": 0,
+  "refresh": "30s",
+  "timezone": "browser",
+  "editable": true,
+  "time": {
+    "from": "now-30d",
+    "to": "now"
+  },
+  "templating": {
+    "list": []
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Cadastradas",
+      "datasource": { "type": "postgres", "uid": "data-master-pg" },
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT count(*) AS \"Cadastradas\" FROM ingestions;",
+          "datasource": { "type": "postgres", "uid": "data-master-pg" }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "blue", "value": null }, { "color": "green", "value": 1 }]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "showPercentChange": false,
+        "sparkline": { "show": true },
+        "textMode": "value_and_name",
+        "wideLayout": true
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Concluídas com sucesso",
+      "datasource": { "type": "postgres", "uid": "data-master-pg" },
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 0 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT count(*) AS \"Sucesso\" FROM ingestions WHERE status = 'SUCCESS';",
+          "datasource": { "type": "postgres", "uid": "data-master-pg" }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "dark-green", "value": null }, { "color": "green", "value": 1 }]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "showPercentChange": false,
+        "sparkline": { "show": true },
+        "textMode": "value_and_name",
+        "wideLayout": true
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Com erro",
+      "datasource": { "type": "postgres", "uid": "data-master-pg" },
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 0 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT count(*) AS \"Erros\" FROM ingestions WHERE status = 'FAILED';",
+          "datasource": { "type": "postgres", "uid": "data-master-pg" }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 1 }]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "showPercentChange": false,
+        "sparkline": { "show": true },
+        "textMode": "value_and_name",
+        "wideLayout": true
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Pendentes de aprovação",
+      "datasource": { "type": "postgres", "uid": "data-master-pg" },
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT count(*) AS \"Pendentes\" FROM ingestions WHERE status = 'PENDING_APPROVAL';",
+          "datasource": { "type": "postgres", "uid": "data-master-pg" }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "green", "value": null }, { "color": "orange", "value": 1 }]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "showPercentChange": false,
+        "sparkline": { "show": true },
+        "textMode": "value_and_name",
+        "wideLayout": true
+      }
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Aprovações vencidas",
+      "datasource": { "type": "postgres", "uid": "data-master-pg" },
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 0 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT count(*) AS \"Vencidas\" FROM ingestions WHERE status = 'PENDING_APPROVAL' AND should_be_approved_until < CURRENT_DATE;",
+          "datasource": { "type": "postgres", "uid": "data-master-pg" }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 1 }]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "showPercentChange": false,
+        "sparkline": { "show": true },
+        "textMode": "value_and_name",
+        "wideLayout": true
+      }
+    },
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Taxa de sucesso da execução",
+      "datasource": { "type": "postgres", "uid": "data-master-pg" },
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 0 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT round(100.0 * count(*) FILTER (WHERE status = 'SUCCESS') / NULLIF(count(*) FILTER (WHERE status IN ('SUCCESS', 'FAILED')), 0), 1) AS \"Taxa de sucesso\" FROM ingestions;",
+          "datasource": { "type": "postgres", "uid": "data-master-pg" }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "yellow", "value": 80 },
+              { "color": "green", "value": 95 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "showPercentChange": false,
+        "sparkline": { "show": true },
+        "textMode": "value_and_name",
+        "wideLayout": true
+      }
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Ingestões cadastradas por dia",
+      "datasource": { "type": "postgres", "uid": "data-master-pg" },
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 4 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT created_at::timestamp AS time, count(*) AS \"Cadastradas\" FROM ingestions WHERE $__timeFilter(created_at::timestamp) GROUP BY created_at ORDER BY 1;",
+          "datasource": { "type": "postgres", "uid": "data-master-pg" }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "bars",
+            "fillOpacity": 100,
+            "gradientMode": "none",
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "never",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "none" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "calcs": ["lastNotNull"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "tooltip": { "hideZeros": false, "mode": "single", "sort": "none" }
+      }
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Cadastradas por dia e status",
+      "datasource": { "type": "postgres", "uid": "data-master-pg" },
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 4 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT created_at::timestamp AS time, status AS metric, count(*) AS total FROM ingestions WHERE $__timeFilter(created_at::timestamp) GROUP BY created_at, status ORDER BY 1;",
+          "datasource": { "type": "postgres", "uid": "data-master-pg" }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "palette-classic" },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "bars",
+            "fillOpacity": 100,
+            "gradientMode": "none",
+            "hideFrom": { "legend": false, "tooltip": false, "viz": false },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": { "type": "linear" },
+            "showPoints": "never",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": { "group": "A", "mode": "normal" },
+            "thresholdsStyle": { "mode": "off" }
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "calcs": ["lastNotNull"], "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "tooltip": { "hideZeros": false, "mode": "multi", "sort": "desc" }
+      }
+    },
+    {
+      "id": 9,
+      "type": "bargauge",
+      "title": "Por sigla (área)",
+      "datasource": { "type": "postgres", "uid": "data-master-pg" },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 13 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT COALESCE(s.name, '(sem sigla)') AS metric, count(i.ingestion_id) AS total FROM ingestions i LEFT JOIN siglas s ON s.sigla_id = i.sigla_id GROUP BY 1 ORDER BY 2 DESC;",
+          "datasource": { "type": "postgres", "uid": "data-master-pg" }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }
+        },
+        "overrides": []
+      },
+      "options": {
+        "displayMode": "gradient",
+        "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": false },
+        "maxVizHeight": 300,
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "namePlacement": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "showUnfilled": true,
+        "sizing": "auto",
+        "valueMode": "text"
+      }
+    },
+    {
+      "id": 10,
+      "type": "bargauge",
+      "title": "Por layer",
+      "datasource": { "type": "postgres", "uid": "data-master-pg" },
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 13 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT COALESCE(tm.layer, '(sem layer)') AS metric, count(i.ingestion_id) AS total FROM ingestions i LEFT JOIN ingestions_table_metadata tm ON tm.ingestion_id = i.ingestion_id AND tm.version = i.active_version GROUP BY 1 ORDER BY 2 DESC;",
+          "datasource": { "type": "postgres", "uid": "data-master-pg" }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }
+        },
+        "overrides": []
+      },
+      "options": {
+        "displayMode": "gradient",
+        "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": false },
+        "maxVizHeight": 300,
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "namePlacement": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "showUnfilled": true,
+        "sizing": "auto",
+        "valueMode": "text"
+      }
+    },
+    {
+      "id": 11,
+      "type": "bargauge",
+      "title": "Por origem",
+      "datasource": { "type": "postgres", "uid": "data-master-pg" },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 13 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT COALESCE(o.sys_name, '(sem origem)') AS metric, count(i.ingestion_id) AS total FROM ingestions i LEFT JOIN ingestions_table_metadata tm ON tm.ingestion_id = i.ingestion_id AND tm.version = i.active_version LEFT JOIN origins o ON o.sys_id = tm.origin GROUP BY 1 ORDER BY 2 DESC;",
+          "datasource": { "type": "postgres", "uid": "data-master-pg" }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }
+        },
+        "overrides": []
+      },
+      "options": {
+        "displayMode": "gradient",
+        "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": false },
+        "maxVizHeight": 300,
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "namePlacement": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "showUnfilled": true,
+        "sizing": "auto",
+        "valueMode": "text"
+      }
+    },
+    {
+      "id": 12,
+      "type": "bargauge",
+      "title": "Por periodicidade",
+      "datasource": { "type": "postgres", "uid": "data-master-pg" },
+      "gridPos": { "h": 7, "w": 8, "x": 0, "y": 20 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT COALESCE(tm.periodicity, '(sem periodicidade)') AS metric, count(i.ingestion_id) AS total FROM ingestions i LEFT JOIN ingestions_table_metadata tm ON tm.ingestion_id = i.ingestion_id AND tm.version = i.active_version GROUP BY 1 ORDER BY 2 DESC;",
+          "datasource": { "type": "postgres", "uid": "data-master-pg" }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }
+        },
+        "overrides": []
+      },
+      "options": {
+        "displayMode": "gradient",
+        "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": false },
+        "maxVizHeight": 300,
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "namePlacement": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "showUnfilled": true,
+        "sizing": "auto",
+        "valueMode": "text"
+      }
+    },
+    {
+      "id": 13,
+      "type": "bargauge",
+      "title": "Classificação de segurança",
+      "datasource": { "type": "postgres", "uid": "data-master-pg" },
+      "gridPos": { "h": 7, "w": 8, "x": 8, "y": 20 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT COALESCE(tm.security_classification, '(sem classificação)') AS metric, count(i.ingestion_id) AS total FROM ingestions i LEFT JOIN ingestions_table_metadata tm ON tm.ingestion_id = i.ingestion_id AND tm.version = i.active_version GROUP BY 1 ORDER BY 2 DESC;",
+          "datasource": { "type": "postgres", "uid": "data-master-pg" }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }
+        },
+        "overrides": []
+      },
+      "options": {
+        "displayMode": "gradient",
+        "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": false },
+        "maxVizHeight": 300,
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "namePlacement": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "showUnfilled": true,
+        "sizing": "auto",
+        "valueMode": "text"
+      }
+    },
+    {
+      "id": 14,
+      "type": "bargauge",
+      "title": "Colunas PII por tipo",
+      "datasource": { "type": "postgres", "uid": "data-master-pg" },
+      "gridPos": { "h": 7, "w": 8, "x": 16, "y": 20 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT p.pii_name AS metric, count(*) AS total FROM ingestions_columns_metadata c JOIN pii_types p ON p.pii_id = c.pii_id WHERE c.pii_id IS NOT NULL AND c.pii_id != 1 GROUP BY 1 ORDER BY 2 DESC;",
+          "datasource": { "type": "postgres", "uid": "data-master-pg" }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }
+        },
+        "overrides": []
+      },
+      "options": {
+        "displayMode": "gradient",
+        "legend": { "calcs": [], "displayMode": "list", "placement": "bottom", "showLegend": false },
+        "maxVizHeight": 300,
+        "minVizHeight": 16,
+        "minVizWidth": 8,
+        "namePlacement": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "showUnfilled": true,
+        "sizing": "auto",
+        "valueMode": "text"
+      }
+    },
+    {
+      "id": 15,
+      "type": "table",
+      "title": "Últimas ingestões",
+      "datasource": { "type": "postgres", "uid": "data-master-pg" },
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 27 },
+      "targets": [
+        {
+          "refId": "A",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT i.ingestion_id AS \"ID\", i.status AS \"Status\", COALESCE(s.name, '—') AS \"Sigla\", i.created_at::text AS \"Criada em\", COALESCE(tm.table_name, '—') AS \"Tabela\", COALESCE(tm.layer, '—') AS \"Layer\", COALESCE(tm.origin_format, '—') AS \"Formato\", COALESCE(tm.periodicity, '—') AS \"Periodicidade\" FROM ingestions i LEFT JOIN siglas s ON s.sigla_id = i.sigla_id LEFT JOIN ingestions_table_metadata tm ON tm.ingestion_id = i.ingestion_id AND tm.version = i.active_version ORDER BY i.created_at DESC, i.ingestion_id DESC LIMIT 20;",
+          "datasource": { "type": "postgres", "uid": "data-master-pg" }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": { "id": "byName", "options": "Status" },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text",
+                  "mode": "background",
+                  "patterns": [
+                    { "displayText": "SUCESSO", "color": "green", "pattern": "SUCCESS" },
+                    { "displayText": "ERRO", "color": "red", "pattern": "FAILED" },
+                    { "displayText": "PENDENTE", "color": "orange", "pattern": "PENDING_APPROVAL" },
+                    { "displayText": "APROVADA", "color": "blue", "pattern": "APPROVED" },
+                    { "displayText": "CANCELADA", "color": "purple", "pattern": "CANCELLED" },
+                    { "displayText": "EXCLUSAO", "color": "dark-blue", "pattern": "PENDING_DELETE" },
+                    { "displayText": "EXCLUIDA", "color": "dark-gray", "pattern": "DELETED" }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "footer": { "countRows": false, "enablePagination": false, "show": false },
+        "showHeader": true,
+        "sortBy": [{ "displayName": "Criada em", "desc": true }]
+      }
+    }
+  ],
+  "timepicker": {},
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  }
+}

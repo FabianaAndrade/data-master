@@ -2,6 +2,7 @@
 Rotas de CRUD de ingestões.
 """
 from fastapi import APIRouter, Depends, HTTPException
+from prometheus_client import Counter
 import httpx
 import os
 import time
@@ -14,6 +15,8 @@ from .. import metadata_client
 logger = logging.getLogger("uvicorn")
 
 router = APIRouter()
+
+ingestions_total = Counter("ingestions_total", "Total number of ingestion status updates received")
 
 # Global cache for Contract ID -> Product ID mapping
 # Format: { "contract_id": "product_id" }
@@ -30,6 +33,7 @@ DCM_HOST_HEADER = os.getenv("DATA_CONTRACT_MANAGER_HOST", "localhost:8081")
 @router.post("/execution-status/{ingestion_id}", response_model=Dict[str, Any], status_code=200)
 async def update_execution_status(ingestion_id: int, body: ExecutionStatusBody):
     """Atualiza o status de execução da ingestão (success/failed). Chamado pelo GitHub Actions."""
+    ingestions_total.inc()
     return await metadata_client.metadata_post(
         f"/ingestions/{ingestion_id}/execution-status",
         json={"status": body.status},

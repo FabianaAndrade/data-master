@@ -2,6 +2,7 @@
 Rotas CRUD de ingestões — criar, listar, detalhar, editar, cancelar, excluir.
 """
 from fastapi import APIRouter, HTTPException
+from prometheus_client import Counter
 from typing import Dict, Any
 
 from ..crud import ingestions as crud
@@ -16,10 +17,18 @@ from ..schemas import (
 
 router = APIRouter()
 
+ingestions_succeeded = Counter("ingestions_succeeded", "Total number of succeeded ingestions")
+ingestions_failed = Counter("ingestions_failed", "Total number of failed ingestions")
+
 
 @router.post("/ingestions/{ingestion_id}/execution-status", response_model=Dict[str, Any], status_code=200)
 def update_execution_status(ingestion_id: str, body: ExecutionStatusBody):
     """Atualiza o status de execução da ingestão (SUCCESS/FAILED)."""
+    if body.status == "SUCCESS":
+        ingestions_succeeded.inc()
+    elif body.status == "FAILED":
+        ingestions_failed.inc()
+
     result = crud.update_execution_status_db(ingestion_id=ingestion_id, status=body.status)
     
     if "error" in result:
