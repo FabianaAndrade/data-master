@@ -66,7 +66,7 @@ const MyAccount = () => {
               </div>
               <div>
                 <h2 className="text-2xl font-bold">{stats.username}</h2>
-                <p className="text-muted-foreground">Usuário Satus</p>
+                <p className="text-muted-foreground">Usuário Aggron</p>
               </div>
             </div>
 
