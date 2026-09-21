@@ -6,6 +6,6 @@ class Config:
     CONSUMER_GROUP_ID = os.getenv("CONSUMER_GROUP_ID", "cdc-approved-ingestions")
 
     GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
-    GITHUB_ORG = os.getenv("GITHUB_ORG", "satus-org")
+    GITHUB_ORG = os.getenv("GITHUB_ORG", "aggron-org")
 
     DATA_CONTRACT_OUTPUT_DIR = os.getenv("DATA_CONTRACT_OUTPUT_DIR", ".")

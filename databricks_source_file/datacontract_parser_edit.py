@@ -61,7 +61,7 @@ def get_schema_table_name(contract_dict):
         medallion_layer = val[0] if isinstance(val, list) else val
         
     schema = f"{medallion_layer}_{sigla}"
-    return f"satus.{schema}.{table_name}".lower()
+    return f"aggron.{schema}.{table_name}".lower()
 
 
 def build_columns_sql(contract_dict):

@@ -255,7 +255,7 @@ services:
       - CDC_TOPIC=${CDC_TOPIC:-ingestion.events}
       - CONSUMER_GROUP_ID=${CONSUMER_GROUP_ID:-cdc-approved-ingestions}
       - GITHUB_TOKEN=${GITHUB_TOKEN:-}
-      - GITHUB_ORG=${GITHUB_ORG:-satus-org}
+      - GITHUB_ORG=${GITHUB_ORG:-aggron-org}
       - DATA_CONTRACT_OUTPUT_DIR=${DATA_CONTRACT_OUTPUT_DIR:-.}
     networks:
       - app-network
