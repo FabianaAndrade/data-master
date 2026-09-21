@@ -1,7 +1,6 @@
 #!/bin/bash
-# -----------------------------------------------------------
 # Aguarda o Kafka Connect ficar disponível e registra o
-# connector Debezium para CDC da tabela outbox.
+# connector Debezium para CDC da tabela ingestions.
 # -----------------------------------------------------------
 
 CONNECT_URL="http://kafka-connect:8083"
@@ -15,17 +14,16 @@ done
 
 echo "Kafka Connect disponível!"
 
-# Verifica se o connector já existe
 EXISTING=$(curl -s "$CONNECT_URL/connectors" | grep -o '"ingestions-connector"')
 
 if [ -n "$EXISTING" ]; then
-  echo "Connector 'ingestions-connector' já existe. Atualizando config..."
+  echo "ℹ️  Connector 'ingestions-connector' já existe. Atualizando config..."
   curl -s -X PUT \
     -H "Content-Type: application/json" \
     --data @"$CONNECTOR_CONFIG" \
     "$CONNECT_URL/connectors/ingestions-connector/config" | head -c 500
 else
-  echo "🚀 Registrando connector 'ingestions-connector'..."
+  echo "Registrando connector 'ingestions-connector'..."
   curl -s -X POST \
     -H "Content-Type: application/json" \
     --data @"$CONNECTOR_CONFIG" \

@@ -17,7 +17,6 @@ export default function Login() {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Se já estiver logado, redireciona para a home
   if (isAuthenticated) {
     return <Navigate to="/" replace />;
   }

@@ -42,10 +42,6 @@ def get_pending_ingestions_for_owner(owner_username: str) -> dict:
     return _handle_response(resp)
 
 
-# ---------------------------------------------------------------------------
-# Write (delega ao metadata_service)
-# ---------------------------------------------------------------------------
-
 def approve_ingestion(ingestion_id: int, approved_by_username: str) -> dict:
     """Chama o metadata_service para aprovar uma ingestão."""
     with httpx.Client() as client:

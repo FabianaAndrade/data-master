@@ -33,10 +33,6 @@ async def _request(method: str, url: str, service_name: str, **kwargs) -> Any:
             )
 
 
-# ---------------------------------------------------------------------------
-# Metadata service
-# ---------------------------------------------------------------------------
-
 async def metadata_get(path: str, **kwargs) -> Any:
     """GET no metadata_service."""
     return await _request("get", f"{METADATA_SERVICE_URL}{path}", "metadata_service", **kwargs)
@@ -56,10 +52,6 @@ async def metadata_delete(path: str, **kwargs) -> Any:
     """DELETE no metadata_service."""
     return await _request("delete", f"{METADATA_SERVICE_URL}{path}", "metadata_service", **kwargs)
 
-
-# ---------------------------------------------------------------------------
-# Auth service
-# ---------------------------------------------------------------------------
 
 async def auth_get(path: str, **kwargs) -> Any:
     """GET no auth_service."""

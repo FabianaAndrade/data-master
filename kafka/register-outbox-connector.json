@@ -5,7 +5,7 @@
     "database.hostname": "postgres_db",
     "database.port": "5432",
     "database.user": "user",
-    "database.password": "password",
+    "database.password": "",
     "database.dbname": "data_catalog",
     "topic.prefix": "outbox",
     "table.include.list": "public.outbox",

@@ -41,7 +41,6 @@ const StepMetadados = ({ data, onChange, onNext, onBack }: StepMetadadosProps) =
   });
   const [isLoading, setIsLoading] = useState(false);
 
-  // ── Validação de datas ────────────────────────────────────────────────────
   const today = todayISO();
   const errCriacao =
     data.dataCriacao && data.dataCriacao < today

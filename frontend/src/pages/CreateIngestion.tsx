@@ -122,7 +122,6 @@ const CreateIngestion = () => {
     }
   };
 
-  // Sync dicionarizacao columns from colunas step
   const prev = () => setStep((s) => Math.max(s - 1, 0));
 
   const getEffectiveColunas = () => {

@@ -1,6 +1,4 @@
-# ─────────────────────────────────────────────
 # Stage 1: build
-# ─────────────────────────────────────────────
 FROM node:20-alpine AS builder
 
 WORKDIR /app
@@ -15,9 +13,7 @@ COPY . .
 
 RUN npm run build
 
-# ─────────────────────────────────────────────
 # Stage 2: servir com nginx na porta 3000
-# ─────────────────────────────────────────────
 FROM nginx:1.27-alpine
 
 # Configuração nginx customizada (porta 3000 + SPA fallback)

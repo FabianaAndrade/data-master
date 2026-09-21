@@ -13,10 +13,6 @@ from .validators import ApprovalValidator
 router = APIRouter()
 
 
-# ---------------------------------------------------------------------------
-# Endpoints
-# ---------------------------------------------------------------------------
-
 @router.get("/approvals/pending", response_model=Dict[str, Any], status_code=200)
 def list_pending_approvals(username: str = Depends(get_current_user)):
     """

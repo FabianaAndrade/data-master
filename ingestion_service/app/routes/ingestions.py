@@ -18,13 +18,11 @@ router = APIRouter()
 
 ingestions_total = Counter("ingestions_total", "Total number of ingestion status updates received")
 
-# Global cache for Contract ID -> Product ID mapping
-# Format: { "contract_id": "product_id" }
+# Cache: Contract ID -> Product ID em DCM (TTL 1h)
 DCM_PRODUCT_MAP = {}
 LAST_CACHE_UPDATE = 0
-CACHE_TTL = 3600  # Cache expires every hour (in seconds)
+CACHE_TTL = 3600
 
-# Constants for Data Contract Manager
 DCM_URL = os.getenv("DATA_CONTRACT_MANAGER_URL", "http://datacontract_manager:8080").rstrip("/")
 DCM_API_KEY = os.getenv("DATA_CONTRACT_API_KEY", "")
 # The DCM (Spring Boot) rejects requests where Host header != APPLICATION_HOST_WEB
@@ -51,7 +49,6 @@ async def get_ingestion_detail(ingestion_id: int, username: str = Depends(get_cu
 async def get_ingestion_detail(ingestion_id: int, username: str = Depends(get_current_user)):
     """Obtém os detalhes de uma ingestão específica."""
     try:
-        # Chama o metadata_service para pegar os dados da ingestão
         result = await metadata_client.metadata_get(f"/ingestions/{ingestion_id}")
         if not result:
             raise HTTPException(status_code=404, detail="Ingestão não encontrada")

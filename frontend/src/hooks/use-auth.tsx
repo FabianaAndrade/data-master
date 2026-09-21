@@ -1,6 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 
-// ── Tipos ─────────────────────────────────────────────────────────────────────
 interface AuthUser {
     username: string;
     token: string;
@@ -13,11 +12,9 @@ interface AuthContextType {
     isAuthenticated: boolean;
 }
 
-// ── Configuração ───────────────────────────────────────────────────────────────
 const AUTH_SERVICE_URL = (import.meta as any).env.VITE_AUTH_SERVICE_URL ?? "http://localhost:8000";
 const STORAGE_KEY = "auth_user";
 
-// ── Context ───────────────────────────────────────────────────────────────────
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -30,7 +27,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
     });
 
-    // Persiste no localStorage sempre que o usuário muda
     useEffect(() => {
         if (user) {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
@@ -66,7 +62,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
 }
 
-// ── Hook público ───────────────────────────────────────────────────────────────
 export function useAuth(): AuthContextType {
     const ctx = useContext(AuthContext);
     if (!ctx) throw new Error("useAuth deve ser usado dentro de <AuthProvider>");

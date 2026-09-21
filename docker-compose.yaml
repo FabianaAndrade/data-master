@@ -221,7 +221,7 @@ services:
           http://kafka-connect:8083/connectors 2>&1 || true
         echo ''
         sleep 3
-        echo '📋 Connectors registrados:'
+        echo 'Connectors registrados:'
         wget --quiet --output-document=- http://kafka-connect:8083/connectors 2>&1
         echo ''
     networks:

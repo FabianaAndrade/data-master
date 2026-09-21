@@ -61,7 +61,6 @@ const EditTable = () => {
   const [consumers, setConsumers] = useState<{name?: string, email?: string}[]>([]);
   const [isLoadingConsumers, setIsLoadingConsumers] = useState(false);
 
-  // Editable fields
   const [tableName, setTableName] = useState("");
   const [tableDescription, setTableDescription] = useState("");
   const [originFormat, setOriginFormat] = useState("");

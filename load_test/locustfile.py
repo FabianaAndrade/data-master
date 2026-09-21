@@ -19,9 +19,6 @@ import uuid
 
 from locust import HttpUser, between, task
 
-# ---------------------------------------------------------------------------
-# Configuração do ambiente
-# ---------------------------------------------------------------------------
 
 AUTH_URL = "http://auth_service:8000"
 INGESTION_URL = "http://ingestion_service:8001"
@@ -88,10 +85,6 @@ def _build_ingestion_payload(username: str, sigla: str, gestor: str) -> dict:
     }
 
 
-# ---------------------------------------------------------------------------
-# AuthUser: estoura o auth_service / LDAP
-# ---------------------------------------------------------------------------
-
 class AuthUser(HttpUser):
     wait_time = between(0.5, 2)
     weight = 2
@@ -117,10 +110,6 @@ class AuthUser(HttpUser):
     def get_user_siglas(self):
         self.client.get(f"{AUTH_URL}/auth/siglas/{self.username}", name="/auth/siglas/{username}")
 
-
-# ---------------------------------------------------------------------------
-# ReaderUser: navegação read-heavy usual da plataforma
-# ---------------------------------------------------------------------------
 
 class ReaderUser(HttpUser):
     wait_time = between(0.5, 2)
@@ -202,10 +191,6 @@ class ReaderUser(HttpUser):
                 name="approvals/pending",
             )
 
-
-# ---------------------------------------------------------------------------
-# WriterUser: cria solicitações de ingestão (escrita leve)
-# ---------------------------------------------------------------------------
 
 class WriterUser(HttpUser):
     wait_time = between(1, 3)

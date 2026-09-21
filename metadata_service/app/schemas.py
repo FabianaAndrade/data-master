@@ -10,9 +10,6 @@ from pydantic import BaseModel
 class ExecutionStatusBody(BaseModel):
     status: Literal["success", "failed"]
 
-# ---------------------------------------------------------------------------
-# Modelos de criação de ingestão (FullIngestionRequest)
-# ---------------------------------------------------------------------------
 
 class ColumnInfo(BaseModel):
     nome: str
@@ -83,20 +80,12 @@ class FullIngestionRequest(BaseModel):
     qualidade: QualidadeData
 
 
-# ---------------------------------------------------------------------------
-# Modelo legado de criação simples (start_ingestion_db)
-# ---------------------------------------------------------------------------
-
 class IngestionRequest(BaseModel):
     sigla: str
     fonte: str
     tabela: str
     descricao: str = ""
 
-
-# ---------------------------------------------------------------------------
-# Modelos de edição / versionamento (update ingestion)
-# ---------------------------------------------------------------------------
 
 class ColumnMetadata(BaseModel):
     column_name: str
@@ -129,10 +118,6 @@ class IngestionRequestUpdate(BaseModel):
     table_metadata: TableMetadata
     columns: List[ColumnMetadata]
 
-
-# ---------------------------------------------------------------------------
-# Modelos de workflow de aprovação
-# ---------------------------------------------------------------------------
 
 class ApproveRejectBody(BaseModel):
     approved_by_username: str

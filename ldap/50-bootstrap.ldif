@@ -1,4 +1,3 @@
-# OUs
 dn: ou=siglas,dc=empresa,dc=com
 objectClass: organizationalUnit
 ou: siglas
@@ -7,7 +6,6 @@ dn: ou=users,dc=empresa,dc=com
 objectClass: organizationalUnit
 ou: users
 
-# Usuários
 dn: uid=jsilva,ou=users,dc=empresa,dc=com
 objectClass: inetOrgPerson
 objectClass: organizationalPerson

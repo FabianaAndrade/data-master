@@ -8,7 +8,6 @@ import { useAuth } from "../hooks/use-auth";
 import { toast } from "sonner";
 import { Loader2, CheckCircle, XCircle, Clock, AlertTriangle } from "lucide-react";
 
-// ── Tipos ─────────────────────────────────────────────────────────────────────
 
 interface PendingIngestion {
   ingestion_id: number;
@@ -51,14 +50,12 @@ interface IngestionDetailData {
   colunas: ColumnDetail[];
 }
 
-// ── Constantes ────────────────────────────────────────────────────────────────
 
 const APPROVAL_SERVICE_URL =
   (import.meta as any).env.VITE_APPROVAL_SERVICE_URL ?? "http://localhost:8003";
 const INGESTION_SERVICE_URL =
   (import.meta as any).env.VITE_INGESTION_SERVICE_URL ?? "http://localhost:8001";
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
 
 const fmtDate = (d?: string) =>
   d ? new Date(d).toLocaleDateString("pt-BR") : "N/A";
@@ -70,7 +67,6 @@ const getDaysRemaining = (deadline: string) => {
   return diff;
 };
 
-// ── Componente ────────────────────────────────────────────────────────────────
 
 const ApproveIngestion = () => {
   const navigate = useNavigate();
@@ -85,7 +81,6 @@ const ApproveIngestion = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [parecer, setParecer] = useState("");
 
-  // Busca pendentes para o owner autenticado
   useEffect(() => {
     async function fetchPending() {
       if (!user?.token) return;
@@ -170,7 +165,6 @@ const ApproveIngestion = () => {
     }
   };
 
-  // ── Render ──────────────────────────────────────────────────────────────────
 
   return (
     <div className="min-h-screen bg-background">
@@ -208,7 +202,7 @@ const ApproveIngestion = () => {
                     return (
                       <SelectItem key={ing.ingestion_id} value={ing.ingestion_id.toString()}>
                         #{ing.ingestion_id} — {ing.table_name ?? "tabela"} ({ing.sigla_name}) —{" "}
-                        {days > 0 ? `${days}d restantes` : "⚠️ Expirado"}
+                        {days > 0 ? `${days}d restantes` : "Expirado"}
                       </SelectItem>
                     );
                   })}

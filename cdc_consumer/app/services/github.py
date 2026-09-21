@@ -117,8 +117,7 @@ class GithubPushRepos:
         if branch:
             payload["branch"] = branch
 
-        # Se o arquivo já existe (ex: vindo do template), inclui o SHA
-        # para que a API permita a atualização
+        # Se o arquivo já existe (ex: vindo do template), inclui o SHA para a API permitir atualização
         sha = self._get_file_sha(repo, file_path, branch)
         if sha:
             payload["sha"] = sha
@@ -218,8 +217,7 @@ class GithubPushRepos:
         if "error" in repo_result:
             return repo_result
 
-        # Aguarda o GitHub finalizar a geração do repo a partir do template
-        # (a API /generate é assíncrona)
+        # Aguarda o GitHub finalizar a geração do repo (a API /generate é assíncrona)
         logger.info("Aguardando geração do repo a partir do template...")
         time.sleep(5)
 

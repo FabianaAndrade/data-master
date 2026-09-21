@@ -176,10 +176,7 @@ def approve_ingestion_db(ingestion_id: int, approved_by: int):
                             (approved_by, ingestion_id)
                         )
 
-                    # -------------------------------------------------------
-                    # Outbox: montar payload enriquecido e inserir na outbox
-                    # (na mesma transação para garantir atomicidade)
-                    # -------------------------------------------------------
+                    # Outbox: payload enriquecido, mesma transação (atomicidade)
                     _insert_approval_outbox(cur, ingestion_id)
 
     finally:

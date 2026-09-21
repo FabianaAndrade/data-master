@@ -64,22 +64,18 @@ const DeleteTable = () => {
   const { user } = useAuth();
   const [step, setStep] = useState(0);
 
-  // Step 0: lista de ingestões
   const [ingestions, setIngestions] = useState<Ingestion[]>([]);
   const [isLoadingList, setIsLoadingList] = useState(true);
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
-  // Step 1: detalhes da ingestão selecionada
   const [detail, setDetail] = useState<IngestionDetail | null>(null);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
 
-  // Step 2: exclusão
   const [isDeleting, setIsDeleting] = useState(false);
   const [consumers, setConsumers] = useState<{name?: string, email?: string}[]>([]);
   const [isLoadingConsumers, setIsLoadingConsumers] = useState(false);
   const [dataExclusao, setDataExclusao] = useState("");
 
-  // Buscar lista de ingestões ao montar
   useEffect(() => {
     async function fetchIngestions() {
       if (!user?.token) return;
@@ -106,7 +102,6 @@ const DeleteTable = () => {
     fetchIngestions();
   }, [user]);
 
-  // Buscar detalhes ao selecionar ingestão e ir para step 1
   const handleSelectIngestion = async (id: number) => {
     if (!user?.token) return;
     setSelectedId(id);
@@ -131,7 +126,6 @@ const DeleteTable = () => {
     }
   };
 
-  // Solicitar exclusão (soft delete)
   const handleDelete = async () => {
     if (!user?.token || !selectedId) return;
     setIsDeleting(true);

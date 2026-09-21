@@ -25,7 +25,6 @@ const StepFonte = ({ data, onChange, onNext, onBack }: StepFonteProps) => {
   const [isLoadingFontes, setIsLoadingFontes] = useState(false);
   const [isLoadingFormatos, setIsLoadingFormatos] = useState(false);
 
-  // Fetch Fontes on mount
   useEffect(() => {
     async function fetchFontes() {
       if (!user?.token) return;
@@ -48,7 +47,6 @@ const StepFonte = ({ data, onChange, onNext, onBack }: StepFonteProps) => {
   }, [user]);
 
 
-  // Fetch Formatos when sistemaOrigem changes
   useEffect(() => {
     async function fetchFormatos() {
       if (!user?.token || !data.sistemaOrigem) {
