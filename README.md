@@ -17,7 +17,7 @@ Na organização observo oportunidades que podem melhor a jornada do usuário, e
 - 
 
 # Desenho de Arquitetura
-![alt text](case_desenho.png)
+![alt text](figures/case_desenho.png)
 
 *Fun-fact*: O nome "Aggron" vem de um pokémon. Ele foi escolhido para representar a plataforma depois de muitas tentativas de escolher um nome legal...
 
