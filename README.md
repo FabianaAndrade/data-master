@@ -14,7 +14,7 @@ Na organização observo oportunidades que podem melhor a jornada do usuário, e
 - Oferecer uma interface única e governada para criação e edição de tabelas no lake;
 - Aplicar contrato de dados para todas tabelas do ambiente, de modo que cada base tenha SLAs bem definidos desde sua criação.
 - Consumidores dos dados serem notificados em caso de alteração em tabela consumida
-- 
+- Garantir mascaramento de dados automático para tabelas com dados sensiveis no data lake
 
 # Desenho de Arquitetura
 ![alt text](figures/case_desenho.png)
