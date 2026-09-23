@@ -72,6 +72,20 @@ A implantação física da tabela ocorre via pipeline de CI/CD:
 - **GitHub Actions**: O `cdc_consumer` dispara a criação de código em repositórios baseados em templates. A Action de CI valida o contrato de dados e executa a criação/alteração da tabela diretamente no **Databricks (Azure/Delta Lake)**.
 - **Feedback Loop**: Ao finalizar a execução, a GitHub Action consome o endpoint de status do `ingestion_service` para reportar se a operação foi um **sucesso** ou **falha**, atualizando a interface para o usuário final.
 
+#### Databricks Unity Catalog: mascaramento e rastreabilidade de dados sensíveis
+Com base na classificação de dados **PII** definida no contrato de dados, foram criadas políticas de **Attribute-Based Access Control (ABAC)** no Unity Catalog do Databricks. Com essa configuração, os campos marcados como sensíveis passam a ser mascarados automaticamente no lake, reforçando a segurança da informação e a conformidade com a **LGPD**.
+
+<p align="center">
+  <img src="figures/figura_01_databricks.png" alt="Visão do Unity Catalog com política de mascaramento" width="700" />
+</p>
+
+Exemplo de consulta com dados mascarados:
+
+<p align="center">
+  <img src="figures/dados_mascarados_consulta.png" alt="Resultado de consulta com campos PII mascarados" width="700" />
+</p>
+
+
 #### **Data Contract Manager (DCM)**
 O **Data Contract Manager** atua como a plataforma de governança central da solução. 
 - **Papel**: Ele serve como o catálogo oficial de contratos de dados, permitindo a definição de SLAs, esquemas e ownership.
