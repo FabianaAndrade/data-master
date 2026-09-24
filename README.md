@@ -16,7 +16,8 @@ Na organização observo oportunidades que podem melhor a jornada do usuário, e
 - Consumidores dos dados serem notificados em caso de alteração em tabela consumida
 - Garantir mascaramento de dados automático para tabelas com dados sensiveis no data lake
 
-
+# Vídeo de demonstração
+![Vídeo de demonstração](figures/data-master.mp4)
 
 # Desenho de Arquitetura
 ![alt text](figures/case_desenho.png)
