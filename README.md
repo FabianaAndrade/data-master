@@ -16,6 +16,20 @@ Na organização observo oportunidades que podem melhor a jornada do usuário, e
 - Consumidores dos dados serem notificados em caso de alteração em tabela consumida
 - Garantir mascaramento de dados automático para tabelas com dados sensiveis no data lake
 
+#### Vídeos demonstraçao funcional
+
+**Parte 01:**
+
+<a href="https://youtu.be/3LrkJM_m7oE" target="_blank">
+  <img src="https://img.youtube.com/vi/3LrkJM_m7oE/hqdefault.jpg" alt="Demonstração Parte 01" width="400">
+</a>
+
+**Parte 02:**
+
+<a href="https://youtu.be/7m1AlsG95TA" target="_blank">
+  <img src="https://img.youtube.com/vi/7m1AlsG95TA/hqdefault.jpg" alt="Demonstração Parte 02" width="400">
+</a>
+
 
 # Desenho de Arquitetura
 ![alt text](figures/case_desenho.png)
