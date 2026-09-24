@@ -19,15 +19,11 @@ Na organização observo oportunidades que podem melhor a jornada do usuário, e
 ## Vídeos com demonstração funcional:
 **Parte 01:**
 
-<a href="https://drive.google.com/file/d/1fZQMHY13aAY5R4PmGqM8mCmIGEtwapKE/view?usp=sharing">
-  <img src="figures/video_01_thumb.jpg" alt="Demonstração Parte 01" width="400">
-</a>
+<video controls src="figures/video_01.mp4" title="Demonstração Parte 01" width="400"></video>
 
 **Parte 02:**
 
-<a href="https://drive.google.com/file/d/1qrNVUW0cN3uR7itrEi2PyOGTFNb53rqH/view?usp=drive_link">
-  <img src="figures/video_02_thumb.jpg" alt="Demonstração Parte 02" width="400">
-</a>
+<video controls src="figures/video_02.mp4" title="Demonstração Parte 02" width="400"></video>
 
 # Desenho de Arquitetura
 ![alt text](figures/case_desenho.png)
