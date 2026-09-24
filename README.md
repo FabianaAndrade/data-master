@@ -17,7 +17,7 @@ Na organização observo oportunidades que podem melhor a jornada do usuário, e
 - Garantir mascaramento de dados automático para tabelas com dados sensiveis no data lake
 
 # Vídeo de demonstração
-![Vídeo de demonstração](figures/data-master.mp4)
+https://github.com/user-attachments/assets/8122a1dc-5431-4503-a006-3d470101a99e
 
 # Desenho de Arquitetura
 ![alt text](figures/case_desenho.png)
